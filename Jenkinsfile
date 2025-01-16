@@ -22,11 +22,11 @@ pipeline {
             steps {
                 script {
                     def imageName = "ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}"
-                    withCredentials([usernamePassword(credentialsId: 'dockerhub_credentials', passwordVariable: 'DOCKERHUB_PASSWORD', usernameVariable: 'DOCKERHUB_USERNAME')]) {
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub_credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
                         sh """
-                            docker build -t ${imageName} .
-                            echo ${DOCKERHUB_PASSWORD} | docker login -u ${DOCKERHUB_USERNAME} --password-stdin
-                            docker push ${imageName}
+                        docker build -t ${imageName} .
+                        echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
+                        docker push ${imageName}
                         """
                     }
                 }
@@ -40,46 +40,41 @@ pipeline {
                     apiVersion: apps/v1
                     kind: Deployment
                     metadata:
-                      name: hello-service
+                      name: helloservice-jenkins
                     spec:
                       replicas: 1
                       selector:
                         matchLabels:
-                          app: hello-service
+                          app: helloservice-jenkins
                       template:
                         metadata:
                           labels:
-                            app: hello-service
+                            app: helloservice-jenkins
                         spec:
                           containers:
-                          - name: hello-service
+                          - name: helloservice-jenkins
                             image: ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}
                             ports:
                             - containerPort: 5000
                     """
-
                     def serviceYaml = """
                     apiVersion: v1
                     kind: Service
                     metadata:
-                      name: hello-service
+                      name: helloservice-jenkins
                     spec:
-                      selector:
-                        app: hello-service
-                      ports:
-                      - protocol: TCP
-                        port: 80
-                        targetPort: 5000
-                        nodePort: 30007
                       type: NodePort
+                      selector:
+                        app: helloservice-jenkins
+                      ports:
+                        - protocol: TCP
+                          port: 5000
+                          nodePort: 30007
                     """
 
-                    writeFile file: 'deployment.yaml', text: deploymentYaml
-                    writeFile file: 'service.yaml', text: serviceYaml
-
                     sh """
-                        ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@15.206.172.143 "kubectl apply -f -" < deployment.yaml
-                        ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@15.206.172.143 "kubectl apply -f -" < service.yaml
+                    echo '${deploymentYaml}' | ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.235.113.19 "kubectl apply -f -"
+                    echo '${serviceYaml}' | ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.235.113.19 "kubectl apply -f -"
                     """
                 }
             }
@@ -88,11 +83,10 @@ pipeline {
 
     post {
         success {
-            echo 'Pipeline completed successfully.'
+            echo 'Job succeeded'
         }
-
         failure {
-            echo 'Pipeline failed.'
+            echo 'Job failed'
         }
     }
 }
