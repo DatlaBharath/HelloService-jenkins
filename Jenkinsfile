@@ -76,8 +76,8 @@ pipeline {
                             app: ${env.JOB_NAME.toLowerCase()}
                         " > service.yaml
 
-                        ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@65.2.144.187 "kubectl apply -f -" < deployment.yaml
-                        ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@65.2.144.187 "kubectl apply -f -" < service.yaml
+                        ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@3.6.238.137 "kubectl apply -f -" < deployment.yaml
+                        ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@3.6.238.137 "kubectl apply -f -" < service.yaml
                     """
                 }
             }
