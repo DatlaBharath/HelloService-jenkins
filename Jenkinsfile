@@ -3,94 +3,92 @@ pipeline {
     tools {
         maven 'Maven'
     }
-    
     stages {
         stage('Checkout') {
             steps {
-                git(url: 'https://github.com/DatlaBharath/HelloService-jenkins', branch: 'main')
+                checkout([$class: 'GitSCM', branches: [[name: 'main']], userRemoteConfigs: [[url: 'https://github.com/DatlaBharath/HelloService-jenkins']]])
             }
         }
-        
-        stage('Build and Package') {
+        stage('Build') {
             steps {
                 sh 'mvn clean package -DskipTests'
             }
         }
-        
         stage('Build Docker Image') {
             steps {
                 script {
-                    def imageName = "ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}"
-                    sh "docker build -t ${imageName} ."
+                    def app = "ratneshpuskar/${env.JOB_NAME.toLowerCase()}:${env.BUILD_NUMBER}"
+                    sh """
+                        docker build -t ${app} .
+                    """
                 }
             }
         }
-        
-     stage('Push Docker Image') {
-    steps {
-        withCredentials([usernamePassword(credentialsId: 'dockerhub_credentials', passwordVariable: 'DOCKER_HUB_PASSWORD', usernameVariable: 'DOCKER_HUB_USERNAME')]) {
-            sh '''#!/bin/bash
-            echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
-            docker push ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}
-            '''
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub_credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
+                        sh """
+                            echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_USERNAME} --password-stdin
+                            docker push ratneshpuskar/${env.JOB_NAME.toLowerCase()}:${env.BUILD_NUMBER}
+                        """
+                    }
+                }
+            }
         }
-    }
-}
-
-        
         stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    def deploymentYaml = """
-                    apiVersion: apps/v1
-                    kind: Deployment
-                    metadata:
-                      name: helloservice-jenkins
-                    spec:
-                      replicas: 1
-                      selector:
-                        matchLabels:
-                          app: helloservice-jenkins
-                      template:
+                    sh """
+                        echo "
+                        apiVersion: apps/v1
+                        kind: Deployment
                         metadata:
-                          labels:
-                            app: helloservice-jenkins
+                          name: ${env.JOB_NAME.toLowerCase()}
                         spec:
-                          containers:
-                          - name: helloservice-jenkins
-                            image: ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}
-                            ports:
-                            - containerPort: 5000
-                    """
+                          replicas: 1
+                          selector:
+                            matchLabels:
+                              app: ${env.JOB_NAME.toLowerCase()}
+                          template:
+                            metadata:
+                              labels:
+                                app: ${env.JOB_NAME.toLowerCase()}
+                            spec:
+                              containers:
+                              - name: ${env.JOB_NAME.toLowerCase()}
+                                image: ratneshpuskar/${env.JOB_NAME.toLowerCase()}:${env.BUILD_NUMBER}
+                                ports:
+                                - containerPort: 5000
+                        " > deployment.yaml
 
-                    def serviceYaml = """
-                    apiVersion: v1
-                    kind: Service
-                    metadata:
-                      name: helloservice-jenkins
-                    spec:
-                      type: NodePort
-                      ports:
-                        - port: 5000
-                          nodePort: 30007
-                          protocol: TCP
-                      selector:
-                        app: helloservice-jenkins
-                    """
+                        echo "
+                        apiVersion: v1
+                        kind: Service
+                        metadata:
+                          name: ${env.JOB_NAME.toLowerCase()}
+                        spec:
+                          type: NodePort
+                          ports:
+                          - port: 5000
+                            nodePort: 30007
+                          selector:
+                            app: ${env.JOB_NAME.toLowerCase()}
+                        " > service.yaml
 
-                    sh """ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@3.6.238.137 "kubectl apply -f -" <<< "${deploymentYaml}"""
-                    sh """ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@3.6.238.137 "kubectl apply -f -" <<< "${serviceYaml}"""
+                        ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@65.2.144.187 "kubectl apply -f -" < deployment.yaml
+                        ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@65.2.144.187 "kubectl apply -f -" < service.yaml
+                    """
                 }
             }
         }
     }
-    
     post {
         success {
-            echo 'Jenkins job completed successfully!'
+            echo 'Deployment was successful!'
         }
         failure {
-            echo 'Jenkins job failed!'
+            echo 'Deployment failed!'
         }
     }
 }
