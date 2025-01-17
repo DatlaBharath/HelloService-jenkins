@@ -26,14 +26,17 @@ pipeline {
             }
         }
         
-        stage('Push Docker Image') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub_credentials', passwordVariable: 'DOCKER_HUB_PASSWORD', usernameVariable: 'DOCKER_HUB_USERNAME')]) {
-                    sh 'echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin'
-                    sh 'docker push ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}'
-                }
-            }
+     stage('Push Docker Image') {
+    steps {
+        withCredentials([usernamePassword(credentialsId: 'dockerhub_credentials', passwordVariable: 'DOCKER_HUB_PASSWORD', usernameVariable: 'DOCKER_HUB_USERNAME')]) {
+            sh '''#!/bin/bash
+            echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
+            docker push ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}
+            '''
         }
+    }
+}
+
         
         stage('Deploy to Kubernetes') {
             steps {
