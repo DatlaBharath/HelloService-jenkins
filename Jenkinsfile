@@ -8,7 +8,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: '', url: 'https://github.com/DatlaBharath/HelloService-jenkins'
+                checkout([$class: 'GitSCM', branches: [[name: '*/main']], userRemoteConfigs: [[url: 'https://github.com/DatlaBharath/HelloService-jenkins']]])
             }
         }
         stage('Build') {
@@ -19,70 +19,65 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    def repoName = 'ratneshpuskar/hello_service-jenkins'
-                    def tagName = "${env.BUILD_NUMBER}"
+                    def imageName = "ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}"
                     sh """
-                        docker build -t ${repoName}:${tagName} .
+                        docker build -t ${imageName} .
                     """
                 }
             }
         }
-        stage('Push to Docker Hub') {
+        stage('Push Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub_credentials', passwordVariable: 'DOCKER_HUB_PASS', usernameVariable: 'DOCKER_HUB_USER')]) {
-                    script {
-                        sh """
-                            echo "${DOCKER_HUB_PASS}" | docker login -u "${DOCKER_HUB_USER}" --password-stdin
-                            docker push ratneshpuskar/hello_service-jenkins:${env.BUILD_NUMBER}
-                        """
-                    }
+                withCredentials([usernamePassword(credentialsId: 'dockerhub_credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh """
+                        echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin
+                        docker push ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}
+                    """
                 }
             }
         }
         stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    def deploymentYaml = '''
+                    def deploymentYAML = """
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: hello-service
+  name: helloservice-deployment
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: hello-service
+      app: helloservice
   template:
     metadata:
       labels:
-        app: hello-service
+        app: helloservice
     spec:
       containers:
-      - name: hello-service
-        image: ratneshpuskar/hello_service-jenkins:${env.BUILD_NUMBER}
+      - name: helloservice-container
+        image: ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}
         ports:
         - containerPort: 5000
-'''
-
-                    def serviceYaml = '''
+                    """
+                    def serviceYAML = """
 apiVersion: v1
 kind: Service
 metadata:
-  name: hello-service
+  name: helloservice-service
 spec:
+  type: NodePort
   selector:
-    app: hello-service
+    app: helloservice
   ports:
     - protocol: TCP
       port: 5000
       targetPort: 5000
       nodePort: 30007
-  type: NodePort
-'''
-
-                    writeFile file: 'deployment.yaml', text: deploymentYaml
-                    writeFile file: 'service.yaml', text: serviceYaml
-
+                    """
+                    writeFile file: 'deployment.yaml', text: deploymentYAML
+                    writeFile file: 'service.yaml', text: serviceYAML
+                    
                     sh """
                         ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.234.112.157 "kubectl apply -f -" < deployment.yaml
                         ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.234.112.157 "kubectl apply -f -" < service.yaml
@@ -94,10 +89,10 @@ spec:
 
     post {
         success {
-            echo 'The pipeline has been completed successfully.'
+            echo 'Deployment succeeded!'
         }
         failure {
-            echo 'The pipeline has failed.'
+            echo 'Deployment failed!'
         }
     }
 }
