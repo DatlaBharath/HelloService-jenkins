@@ -3,17 +3,20 @@ pipeline {
     tools {
         maven 'Maven'
     }
+    
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/DatlaBharath/HelloService-jenkins'
+                git(url: 'https://github.com/DatlaBharath/HelloService-jenkins', branch: 'main')
             }
         }
-        stage('Build') {
+        
+        stage('Build and Package') {
             steps {
                 sh 'mvn clean package -DskipTests'
             }
         }
+        
         stage('Build Docker Image') {
             steps {
                 script {
@@ -22,68 +25,69 @@ pipeline {
                 }
             }
         }
-        stage('Docker Push') {
+        
+        stage('Push Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub_credentials', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
-                    sh """echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_USERNAME} --password-stdin"""
-                    sh "docker push ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}"
+                withCredentials([usernamePassword(credentialsId: 'dockerhub_credentials', passwordVariable: 'DOCKER_HUB_PASSWORD', usernameVariable: 'DOCKER_HUB_USERNAME')]) {
+                    sh 'echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin'
+                    sh 'docker push ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}'
                 }
             }
         }
+        
         stage('Deploy to Kubernetes') {
             steps {
                 script {
                     def deploymentYaml = """
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: helloservice
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: helloservice
-  template:
-    metadata:
-      labels:
-        app: helloservice
-    spec:
-      containers:
-      - name: helloservice
-        image: ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}
-        ports:
-        - containerPort: 5000
-"""
+                    apiVersion: apps/v1
+                    kind: Deployment
+                    metadata:
+                      name: helloservice-jenkins
+                    spec:
+                      replicas: 1
+                      selector:
+                        matchLabels:
+                          app: helloservice-jenkins
+                      template:
+                        metadata:
+                          labels:
+                            app: helloservice-jenkins
+                        spec:
+                          containers:
+                          - name: helloservice-jenkins
+                            image: ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}
+                            ports:
+                            - containerPort: 5000
+                    """
+
                     def serviceYaml = """
-apiVersion: v1
-kind: Service
-metadata:
-  name: helloservice
-spec:
-  selector:
-    app: helloservice
-  ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 5000
-      nodePort: 30007
-  type: NodePort
-"""
-                    writeFile file: 'deployment.yaml', text: deploymentYaml
-                    writeFile file: 'service.yaml', text: serviceYaml
-                    sh 'scp -i /var/test.pem -o StrictHostKeyChecking=no deployment.yaml service.yaml ubuntu@13.232.84.241:/tmp/'
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.232.84.241 "kubectl apply -f /tmp/deployment.yaml"'
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.232.84.241 "kubectl apply -f /tmp/service.yaml"'
+                    apiVersion: v1
+                    kind: Service
+                    metadata:
+                      name: helloservice-jenkins
+                    spec:
+                      type: NodePort
+                      ports:
+                        - port: 5000
+                          nodePort: 30007
+                          protocol: TCP
+                      selector:
+                        app: helloservice-jenkins
+                    """
+
+                    sh """ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@3.6.238.137 "kubectl apply -f -" <<< "${deploymentYaml}"""
+                    sh """ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@3.6.238.137 "kubectl apply -f -" <<< "${serviceYaml}"""
                 }
             }
         }
     }
+    
     post {
         success {
-            echo 'Deployment succeeded'
+            echo 'Jenkins job completed successfully!'
         }
         failure {
-            echo 'Deployment failed'
+            echo 'Jenkins job failed!'
         }
     }
 }
