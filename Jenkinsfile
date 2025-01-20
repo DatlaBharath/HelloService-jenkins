@@ -1,92 +1,94 @@
 pipeline {
-    agent any
-
+    agent any 
     tools {
-        maven "Maven"
+        maven 'Maven' 
     }
-
     stages {
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
-                checkout([$class: 'GitSCM', branches: [[name: '*/main']], userRemoteConfigs: [[url: 'https://github.com/DatlaBharath/HelloService-jenkins']]])
+                git branch: 'main', url: 'https://github.com/DatlaBharath/HelloService-jenkins'
             }
         }
-        stage('Build') {
+        stage('Build with Maven') {
             steps {
-                sh 'mvn clean install -DskipTests'
+                sh 'mvn clean package -DskipTests'
             }
         }
-        stage('Docker Build and Push') {
+        stage('Build Docker Image') {
             steps {
                 script {
-                    def imageName = "ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}"
-                    docker.build(imageName).withRun { c ->
-                        def localImage = docker.image(imageName)
-                        withCredentials([usernamePassword(credentialsId: 'dockerhub_credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
-                            sh """
-                                echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-                                docker push ${localImage.id}
-                            """
-                        }
-                    }
+                    def dockerImage = "ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}"
+                    sh """
+                    docker build -t ${dockerImage} .
+                    """
+                }
+            }
+        }
+        stage('Push Docker Image') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub_credentials', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                    sh """
+                    echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
+                    docker push ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}
+                    """
                 }
             }
         }
         stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    writeFile file: 'deployment.yaml', text: """
-                        apiVersion: apps/v1
-                        kind: Deployment
+                    def deployment = """
+                    apiVersion: apps/v1
+                    kind: Deployment
+                    metadata:
+                      name: helloservice-jenkins-deployment
+                    spec:
+                      replicas: 1
+                      selector:
+                        matchLabels:
+                          app: helloservice-jenkins
+                      template:
                         metadata:
-                          name: helloservice-jenkins
-                        spec:
-                          replicas: 1
-                          selector:
-                            matchLabels:
-                              app: helloservice-jenkins
-                          template:
-                            metadata:
-                              labels:
-                                app: helloservice-jenkins
-                            spec:
-                              containers:
-                              - name: helloservice-jenkins
-                                image: ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}
-                                ports:
-                                - containerPort: 5000
-                    """
-                    
-                    writeFile file: 'service.yaml', text: """
-                        apiVersion: v1
-                        kind: Service
-                        metadata:
-                          name: helloservice-jenkins
-                        spec:
-                          selector:
+                          labels:
                             app: helloservice-jenkins
-                          ports:
-                            - protocol: TCP
-                              port: 5000
-                              nodePort: 30007
-                          type: NodePort
+                        spec:
+                          containers:
+                          - name: helloservice-jenkins
+                            image: ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}
+                            ports:
+                            - containerPort: 5000
                     """
-                    
-                    sh """ 
-                        ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@3.6.238.137 "kubectl apply -f -" < deployment.yaml 
-                        ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@3.6.238.137 "kubectl apply -f -" < service.yaml
+                    def service = """
+                    apiVersion: v1
+                    kind: Service
+                    metadata:
+                      name: helloservice-jenkins-service
+                    spec:
+                      type: NodePort
+                      selector:
+                        app: helloservice-jenkins
+                      ports:
+                      - protocol: TCP
+                        port: 5000
+                        targetPort: 5000
+                        nodePort: 30007
+                    """
+                    writeFile file: 'deployment.yaml', text: deployment
+                    writeFile file: 'service.yaml', text: service
+                    sh """
+                    ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@3.6.238.137 "kubectl apply -f -" < deployment.yaml
+                    ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@3.6.238.137 "kubectl apply -f -" < service.yaml
                     """
                 }
             }
         }
     }
-
     post {
         success {
-            echo "Job completed successfully."
+            echo 'Deployment completed successfully!'
         }
         failure {
-            echo "Job failed. Please check the logs."
+            echo 'Deployment failed.'
         }
     }
 }
