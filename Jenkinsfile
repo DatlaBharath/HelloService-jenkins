@@ -1,35 +1,43 @@
 pipeline {
-    agent any 
+    agent any
 
     tools {
         maven 'Maven'
     }
 
     stages {
-        stage('Checkout') {
+        stage('Checkout code') {
             steps {
-                git branch: 'main', url: 'https://github.com/DatlaBharath/HelloService-jenkins'
+                git url: 'https://github.com/DatlaBharath/HelloService-jenkins', branch: 'main'
             }
         }
-        stage('Build') {
+        
+        stage('Build Maven project') {
             steps {
                 sh 'mvn clean package -DskipTests'
             }
         }
-        stage('Docker Build and Push') {
+        
+        stage('Build Docker image') {
             steps {
                 script {
-                    def imageName = "ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}"
-                    withCredentials([usernamePassword(credentialsId: 'dockerhub_credentials', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
-                        sh """
-                        docker build -t ${imageName} .
-                        echo "${DOCKERHUB_PASS}" | docker login -u "${DOCKERHUB_USER}" --password-stdin
-                        docker push ${imageName}
-                        """
-                    }
+                    def dockerImageName = "ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}"
+                    sh "docker build -t ${dockerImageName} ."
                 }
             }
         }
+        
+        stage('Push Docker image') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub_credentials', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
+                    sh """
+                    echo $DOCKERHUB_PASS | docker login -u $DOCKERHUB_USER --password-stdin
+                    docker push ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}
+                    """
+                }
+            }
+        }
+        
         stage('Deploy to Kubernetes') {
             steps {
                 script {
@@ -37,42 +45,46 @@ pipeline {
                     apiVersion: apps/v1
                     kind: Deployment
                     metadata:
-                      name: helloservice-deployment
+                      name: helloservice-jenkins
                     spec:
                       replicas: 1
                       selector:
                         matchLabels:
-                          app: helloservice
+                          app: helloservice-jenkins
                       template:
                         metadata:
                           labels:
-                            app: helloservice
+                            app: helloservice-jenkins
                         spec:
                           containers:
-                          - name: helloservice
-                            image: "ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}"
+                          - name: helloservice-jenkins
+                            image: ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}
                             ports:
                             - containerPort: 5000
                     """
+
                     def serviceYaml = """
                     apiVersion: v1
                     kind: Service
                     metadata:
-                      name: helloservice-service
+                      name: helloservice-jenkins
                     spec:
-                      selector:
-                        app: helloservice
-                      ports:
-                        - protocol: TCP
-                          port: 5000
-                          targetPort: 5000
-                          nodePort: 30007
                       type: NodePort
+                      selector:
+                        app: helloservice-jenkins
+                      ports:
+                      - port: 5000
+                        targetPort: 5000
+                        nodePort: 30007
                     """
-                    sh "echo '${deploymentYaml}' > deployment.yaml"
-                    sh "echo '${serviceYaml}' > service.yaml"
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@3.6.238.137 "kubectl apply -f -" < deployment.yaml'
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@3.6.238.137 "kubectl apply -f -" < service.yaml'
+
+                    writeFile file: 'deployment.yaml', text: deploymentYaml
+                    writeFile file: 'service.yaml', text: serviceYaml
+
+                    sh("""
+                    ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@3.6.238.137 "kubectl apply -f -" < deployment.yaml
+                    ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@3.6.238.137 "kubectl apply -f -" < service.yaml
+                    """)
                 }
             }
         }
@@ -80,10 +92,11 @@ pipeline {
 
     post {
         success {
-            echo 'Build and deployment were successful!'
+            echo 'Pipeline executed successfully!'
         }
+        
         failure {
-            echo 'Build or deployment failed.'
+            echo 'Pipeline failed!'
         }
     }
 }
