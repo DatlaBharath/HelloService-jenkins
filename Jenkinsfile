@@ -42,7 +42,7 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    def deploymentYAML = '''apiVersion: apps/v1
+                    def deploymentYAML = """apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: helloservice-deployment
@@ -61,7 +61,7 @@ spec:
         image: ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}
         ports:
         - containerPort: 5000
-'''
+"""
                     def serviceYAML = '''apiVersion: v1
 kind: Service
 metadata:
@@ -73,7 +73,7 @@ spec:
       nodePort: 30007
   selector:
     app: helloservice
-'''
+"""
                     writeFile(file: 'deployment.yaml', text: deploymentYAML)
                     writeFile(file: 'service.yaml', text: serviceYAML)
 
