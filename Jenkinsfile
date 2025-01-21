@@ -62,7 +62,7 @@ spec:
         ports:
         - containerPort: 5000
 """
-                    def serviceYAML = '''apiVersion: v1
+                    def serviceYAML = """apiVersion: v1
 kind: Service
 metadata:
   name: helloservice
