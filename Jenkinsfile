@@ -8,77 +8,74 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                checkout([$class: 'GitSCM', branches: [[name: '*/main']], userRemoteConfigs: [[url: 'https://github.com/DatlaBharath/HelloService-jenkins']]])
+                git branch: 'main', url: 'https://github.com/DatlaBharath/HelloService-jenkins'
             }
         }
-
         stage('Build') {
             steps {
                 sh 'mvn clean package -DskipTests'
             }
         }
-
         stage('Build Docker Image') {
             steps {
                 script {
-                    def imageName = "ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}"
-                    sh """
-                        docker build -t ${imageName} .
-                    """
+                    def repoName = 'helloservice-jenkins'.toLowerCase()
+                    def imageName = "ratneshpuskar/${repoName}:${env.BUILD_NUMBER}"
+                    sh "docker build -t ${imageName} ."
                 }
             }
         }
-
         stage('Push Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub_credentials', usernameVariable: 'DOCKERHUB_USERNAME', passwordVariable: 'DOCKERHUB_PASSWORD')]) {
-                    sh """
-                        echo "${DOCKERHUB_PASSWORD}" | docker login -u "${DOCKERHUB_USERNAME}" --password-stdin
-                        docker push ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}
-                    """
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub_credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
+                        sh """
+                            echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
+                            docker push ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}
+                        """
+                    }
                 }
             }
         }
-
         stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    def deploymentYaml = '''
-                    apiVersion: apps/v1
-                    kind: Deployment
-                    metadata:
-                      name: helloservice
-                    spec:
-                      replicas: 1
-                      selector:
-                        matchLabels:
-                          app: helloservice
-                      template:
-                        metadata:
-                          labels:
-                            app: helloservice
-                        spec:
-                          containers:
-                          - name: helloservice
-                            image: ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}
-                            ports:
-                            - containerPort: 5000
-                    '''
-                    def serviceYaml = '''
-                    apiVersion: v1
-                    kind: Service
-                    metadata:
-                      name: helloservice
-                    spec:
-                      type: NodePort
-                      ports:
-                      - port: 5000
-                        nodePort: 30007
-                        protocol: TCP
-                      selector:
-                        app: helloservice
-                    '''
-
+                    def deploymentYaml = """
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello-service
+  template:
+    metadata:
+      labels:
+        app: hello-service
+    spec:
+      containers:
+      - name: hello-service
+        image: ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}
+        ports:
+        - containerPort: 5000
+                    """
+                    def serviceYaml = """
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-service
+spec:
+  selector:
+    app: hello-service
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000
+      nodePort: 30007
+  type: NodePort
+                    """
                     writeFile file: 'deployment.yaml', text: deploymentYaml
                     writeFile file: 'service.yaml', text: serviceYaml
 
@@ -93,7 +90,7 @@ pipeline {
 
     post {
         success {
-            echo 'Deployment succeeded!'
+            echo 'Deployment successful!'
         }
         failure {
             echo 'Deployment failed!'
