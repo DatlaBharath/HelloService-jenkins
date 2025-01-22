@@ -27,10 +27,10 @@ pipeline {
         stage('Push Docker Image') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub_credentials', usernameVariable: 'DOCKERHUB_USERNAME', passwordVariable: 'DOCKERHUB_PASSWORD')]) {
-                    sh '''
+                    sh """
                         echo ${DOCKERHUB_PASSWORD} | docker login -u ${DOCKERHUB_USERNAME} --password-stdin
                         docker push ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}
-                    '''
+                    """
                 }
             }
         }
