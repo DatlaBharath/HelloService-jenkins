@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     tools {
-        nodejs 'NodeJS'
+        maven 'Maven'
     }
 
     stages {
@@ -14,8 +14,7 @@ pipeline {
 
         stage('Build') {
             steps {
-                sh 'npm install'
-                sh 'npm run build --if-present'
+                sh 'mvn clean package -DskipTests'
             }
         }
 
