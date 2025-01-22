@@ -2,25 +2,27 @@ pipeline {
     agent any
 
     tools {
-        maven 'Maven'
+        nodejs 'NodeJS'
     }
+
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/DatlaBharath/HelloService'
+                git branch: 'main', url: 'https://github.com/DatlaBharath/HelloService-jenkins'
             }
         }
 
         stage('Build') {
             steps {
-                sh 'mvn clean package -DskipTests'
+                sh 'npm install'
+                sh 'npm run build --if-present'
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 script {
-                    def imageName = "ratneshpuskar/helloservice:${env.BUILD_NUMBER}"
+                    def imageName = "ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}"
                     sh "docker build -t ${imageName} ."
                 }
             }
@@ -30,8 +32,8 @@ pipeline {
             steps {
                 script {
                     withCredentials([usernamePassword(credentialsId: 'dockerhub_credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
-                        sh 'echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_USERNAME} --password-stdin'     
-                        def imageName = "ratneshpuskar/helloservice:${env.BUILD_NUMBER}"
+                        sh 'echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_USERNAME} --password-stdin'
+                        def imageName = "ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}"
                         sh "docker push ${imageName}"
                     }
                 }
@@ -60,7 +62,7 @@ pipeline {
                         spec:
                           containers:
                           - name: helloservice
-                            image: ratneshpuskar/helloservice:${env.BUILD_NUMBER}
+                            image: ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}
                             ports:
                             - containerPort: 5000
                     """
