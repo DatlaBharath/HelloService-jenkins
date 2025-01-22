@@ -4,7 +4,6 @@ pipeline {
     tools {
         maven 'Maven'
     }
-
     stages {
         stage('Checkout') {
             steps {
