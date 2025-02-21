@@ -2,7 +2,7 @@
 version: 2
 plan:
     project-key: ABC
-    name: Maven Build and Docker Build
+    name: Maven Build and Docker Builds
     key: BUILD
 
 stages:
