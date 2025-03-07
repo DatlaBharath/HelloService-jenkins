@@ -1,9 +1,9 @@
 ---
 version: 2
 plan:
-    project-key: ABC
-    name: Maven Build and Docker Building
-    key: BUILD
+    project-key: AUT
+    name: Maven Build and Docker Deploy Plan
+    key: JAVA
 
 stages:
     - Build and Deploy:
@@ -14,9 +14,9 @@ Build and Package:
     tasks:
     - script:
         - mvn clean install -DskipTests
-        - docker build -t sakthisiddu1/helloservice:3 .
+        - docker build -t sakthisiddu1/helloservice:${bamboo.buildNumber} .
         - echo "Sakthisid@1" | docker login -u "sakthisiddu1" --password-stdin
-        - docker push sakthisiddu1/helloservice:3
+        - docker push sakthisiddu1/helloservice:${bamboo.buildNumber}
         
     - script:
         - echo "Creating deployment.yaml"
@@ -38,7 +38,7 @@ Build and Package:
                 spec:
                   containers:
                   - name: helloservice
-                    image: sakthisiddu1/helloservice:3
+                    image: sakthisiddu1/helloservice:${bamboo.buildNumber}
                     ports:
                     - containerPort: 5000
             EOF
@@ -62,6 +62,6 @@ Build and Package:
         
     - script:
         - echo "Deploying to Kubernetes"
-        - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@13.235.103.199:/home/ubuntu/
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.235.103.199 "kubectl apply -f /home/ubuntu/deployment.yaml"
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.235.103.199 "kubectl apply -f /home/ubuntu/service.yaml"
+        - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@3.109.60.121:/home/ubuntu/
+        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@3.109.60.121 "kubectl apply -f /home/ubuntu/deployment.yaml"
+        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@3.109.60.121 "kubectl apply -f /home/ubuntu/service.yaml"
