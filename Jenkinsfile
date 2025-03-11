@@ -10,11 +10,16 @@ pipeline {
     }
 
     stages {
-        stage('Curl Request') {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/DatlaBharath/HelloService-jenkins'
+            }
+        }
+      stage('Curl Request') {
             steps {
                 script {
                     // Capture the response from the curl request
-                    def response = sh(script: 'curl -s http://ec2-13-28-57.ap-south-1.compute.amazonaws.com/app/random-data', returnStdout: true).trim()
+                    def response = sh(script: 'curl -s http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/random-data', returnStdout: true).trim()
                     
                     // Log the response for debugging
                     echo "Curl response: ${response}"
@@ -24,7 +29,7 @@ pipeline {
                     
                     // Send the response to your backend using a more reliable method
                     sh """
-                    curl -X POST http://ec2-13-57.ap-south-1.compute.amazonaws.com/app/save-curl-response \\
+                    curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response \\
                     -H "Content-Type: application/json" \\
                     -d "{\\"response\\":\\"${escapedResponse}\\"}"
                     """
@@ -39,11 +44,6 @@ pipeline {
                         error("Curl request failed, terminating pipeline.")
                     }
                 }
-            }
-        }
-        stage('Checkout') {
-            steps {
-                git branch: 'main', url: 'https://github.com/DatlaBharath/HelloService-jenkins'
             }
         }
 
