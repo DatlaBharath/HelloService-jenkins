@@ -19,7 +19,7 @@ pipeline {
     steps {
         script {
             // Capture the response from the curl request - using sh to execute bash command
-            def response = sh(script: 'curl -s http://ec2-13-18-57.ap-south-1.compute.amazonaws.com/app/random-data', returnStdout: true).trim()
+            def response = sh(script: 'curl -s http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/random-data', returnStdout: true).trim()
             
             // Log the response for debugging
             echo "Curl response: ${response}"
@@ -29,7 +29,7 @@ pipeline {
             
             // Send the response to your backend using the same format as GitHub Actions
             sh """
-            curl -X POST http://ec2-13-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response \\
+            curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response \\
             -H "Content-Type: application/json" \\
             -d "{\\"response\\": \\"${escapedResponse}\\"}"
             """
