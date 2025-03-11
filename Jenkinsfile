@@ -5,7 +5,47 @@ pipeline {
         maven 'Maven'
     }
 
+    environment {
+        CURL_STATUS = ''
+    }
+
     stages {
+        stage('Curl Request') {
+            steps {
+                script {
+                    // Capture the response from the curl request
+                    def response = sh(script: 'curl -s http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/random-data', returnStdout: true).trim()
+                    
+                    // Escape any quotes in the response (similar to the GitHub Action script)
+                    def escapedResponse = response.replaceAll('"', '\\"')
+
+                    // Log the response
+                    echo "Curl response: ${response}"
+
+                    // Send the response to your backend to be stored in a file
+                    sh """
+                    curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response \\
+                    -H "Content-Type: application/json" \\
+                    -d '{"response": "${escapedResponse}"}'
+                    """
+
+                    // Check if the response contains 'success': true (similar to the GitHub Action logic)
+                    if (response.contains('"success":true')) {
+                        echo "Success response received."
+                        // Set CURL_STATUS to 'true'
+                        env.CURL_STATUS = 'true'
+                    } else {
+                        echo "Failure response received."
+                        // Set CURL_STATUS to 'false'
+                        env.CURL_STATUS = 'false'
+                        
+                        // Explicitly fail the pipeline
+                        error("Curl request failed, terminating pipeline.")
+                    }
+                }
+            }
+        }
+
         stage('Checkout') {
             steps {
                 git branch: 'main', url: 'https://github.com/DatlaBharath/HelloService-jenkins'
