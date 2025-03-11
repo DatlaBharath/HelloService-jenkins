@@ -18,21 +18,21 @@ pipeline {
      stage('Curl Request') {
     steps {
         script {
-            // Capture the response from the curl request
-            def response = sh(script: 'curl -s http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/random-data', returnStdout: true).trim()
+            // Capture the response from the curl request - using sh to execute bash command
+            def response = sh(script: 'curl -s http://ec2-13-18-57.ap-south-1.compute.amazonaws.com/app/random-data', returnStdout: true).trim()
             
             // Log the response for debugging
             echo "Curl response: ${response}"
             
-            // Write the response to a temporary file
-            writeFile file: 'temp_response.json', text: "{\"response\":${response}}"
+            // Escape the response using the same sed approach from GitHub Actions
+            def escapedResponse = sh(script: "echo '${response}' | sed 's/\"/\\\\\"/g'", returnStdout: true).trim()
             
-            // Send the file content to your backend
-            sh '''
-            curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response \\
+            // Send the response to your backend using the same format as GitHub Actions
+            sh """
+            curl -X POST http://ec2-13-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response \\
             -H "Content-Type: application/json" \\
-            -d @temp_response.json
-            '''
+            -d "{\\"response\\": \\"${escapedResponse}\\"}"
+            """
             
             // Check if the response contains 'success': true
             if (response.contains('"success":true')) {
