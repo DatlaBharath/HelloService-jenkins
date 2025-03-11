@@ -15,38 +15,37 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/DatlaBharath/HelloService-jenkins'
             }
         }
-      stage('Curl Request') {
-            steps {
-                script {
-                    // Capture the response from the curl request
-                    def response = sh(script: 'curl -s http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/random-data', returnStdout: true).trim()
-                    
-                    // Log the response for debugging
-                    echo "Curl response: ${response}"
-                    
-                    // Use a more reliable approach for JSON escaping
-                    def escapedResponse = response.replace('\\', '\\\\').replace('"', '\\"')
-                    
-                    // Send the response to your backend using a more reliable method
-                    sh """
-                    curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response \\
-                    -H "Content-Type: application/json" \\
-                    -d "{\\"response\\":\\"${escapedResponse}\\"}"
-                    """
-                    
-                    // Check if the response contains 'success': true
-                    if (response.contains('"success":true')) {
-                        echo "Success response received."
-                        env.CURL_STATUS = 'true'
-                    } else {
-                        echo "Failure response received."
-                        env.CURL_STATUS = 'false'
-                        error("Curl request failed, terminating pipeline.")
-                    }
-                }
+     stage('Curl Request') {
+    steps {
+        script {
+            // Capture the response from the curl request
+            def response = sh(script: 'curl -s http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/random-data', returnStdout: true).trim()
+            
+            // Log the response for debugging
+            echo "Curl response: ${response}"
+            
+            // Write the response to a temporary file
+            writeFile file: 'temp_response.json', text: "{\"response\":${response}}"
+            
+            // Send the file content to your backend
+            sh '''
+            curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response \\
+            -H "Content-Type: application/json" \\
+            -d @temp_response.json
+            '''
+            
+            // Check if the response contains 'success': true
+            if (response.contains('"success":true')) {
+                echo "Success response received."
+                env.CURL_STATUS = 'true'
+            } else {
+                echo "Failure response received."
+                env.CURL_STATUS = 'false'
+                error("Curl request failed, terminating pipeline.")
             }
         }
-
+    }
+}
         stage('Build') {
             steps {
                 sh 'mvn clean package -DskipTests'
