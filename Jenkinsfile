@@ -21,7 +21,7 @@ pipeline {
 
                     // Send the response to your backend to be stored in a file
                     sh """
-                    curl -X POST http://ec2ap-south-1.compute.amazonaws.com/app/save-curl-response \\
+                    curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response \\
                     -H "Content-Type: application/json" \\
                     -d "{\\"response\\": \\"${escapedResponse}\\"}"
                     """
