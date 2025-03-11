@@ -17,18 +17,14 @@ pipeline {
                     def response = sh(script: 'curl -s http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/random-data', returnStdout: true).trim()
                     
                     // Escape any quotes in the response (similar to the GitHub Action script)
-                    def escapedResponse = response.replaceAll('"', '\\"')
-
-                    // Log the response
-                    echo "Curl response: ${response}"
+                     def escapedResponse = response.replaceAll('"', '\\\\"')
 
                     // Send the response to your backend to be stored in a file
                     sh """
-                    curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response \\
+                    curl -X POST http://ec2ap-south-1.compute.amazonaws.com/app/save-curl-response \\
                     -H "Content-Type: application/json" \\
-                    -d '{"response": "${escapedResponse}"}'
+                    -d "{\\"response\\": \\"${escapedResponse}\\"}"
                     """
-
                     // Check if the response contains 'success': true (similar to the GitHub Action logic)
                     if (response.contains('"success":true')) {
                         echo "Success response received."
