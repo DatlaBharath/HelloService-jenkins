@@ -10,7 +10,6 @@ pipeline {
     }
 
     stages {
-        stages {
         stage('Curl Request') {
             steps {
                 script {
