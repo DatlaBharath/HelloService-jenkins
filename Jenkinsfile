@@ -19,7 +19,15 @@ pipeline {
     steps {
         script {
             // Capture the response from the curl request - using sh to execute bash command
-            def response = sh(script: 'curl -s http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/random-data', returnStdout: true).trim()
+            def response = sh(script: 'curl --location 'http://20.77.48.100/api/vmsb/pipelines/initscan/test' \
+                          --header 'Content-Type: application/json' \
+                          --data '{ 
+                              "encrypted_user_id": "gAAAAABnyCdKTdqwwv1tgbx8CqlTQnyYbqWBATox1Q58q-y8PmXbXc4_65tTO3jRijx92hpZI1juGV-80apcQa0Z72HgzkJsiA==",
+                            "scanner_id": 1,
+                            "target_branch": "main",
+                            "repo_url": "https://github.com/DatlaBharath/HelloService",
+                            "pat": "string"
+                          }', returnStdout: true).trim()
             
             // Log the response for debugging
             echo "Curl response: ${response}"
