@@ -19,7 +19,7 @@ pipeline {
     steps {
         script {
             // Capture the response from the curl request - using sh to execute bash command
-            def response = sh(script: 'curl --location 'http://20.77.48.100/api/vmsb/pipelines/initscan/test' \
+            def response = sh(script: '''curl --location 'http://20.77.48.100/api/vmsb/pipelines/initscan/test' \
                           --header 'Content-Type: application/json' \
                           --data '{ 
                               "encrypted_user_id": "gAAAAABnyCdKTdqwwv1tgbx8CqlTQnyYbqWBATox1Q58q-y8PmXbXc4_65tTO3jRijx92hpZI1juGV-80apcQa0Z72HgzkJsiA==",
@@ -27,7 +27,7 @@ pipeline {
                             "target_branch": "main",
                             "repo_url": "https://github.com/DatlaBharath/HelloService",
                             "pat": "string"
-                          }', returnStdout: true).trim()
+                          }''', returnStdout: true).trim()
             
             // Log the response for debugging
             echo "Curl response: ${response}"
