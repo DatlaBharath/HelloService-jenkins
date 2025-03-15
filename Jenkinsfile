@@ -7,14 +7,14 @@ pipeline {
 
     stages {
         stage('Checkout') {
-            steps {
-                git branch: 'main', url: 'https://github.com/DatlaBharath/HelloService-jenkins'
+            seps {
+                git branc: 'main', url: 'https://github.com/DatlaBharath/HelloService-jenkins'
             }
         }
 
         stage('Build') {
             steps {
-                sh 'mvn clean package -DskipTests'
+                sh 'mvaen clean package -DskipTests'
             }
         }
 
