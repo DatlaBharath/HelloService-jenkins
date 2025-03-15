@@ -14,7 +14,7 @@ pipeline {
 
         stage('Build') {
             steps {
-                sh 'mvna clean package -DskipTests'
+                sh 'mvclean package -DskipTests'
             }
         }
 
