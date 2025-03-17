@@ -6,6 +6,9 @@ plan:
     key: MVN
 
 stages:
+    - Security Scan:
+        jobs:
+        - Vulnerability Scan
     - Build and Deploy:
         jobs:
         - Build and Package
