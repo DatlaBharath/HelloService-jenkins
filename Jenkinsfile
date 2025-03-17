@@ -11,47 +11,10 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/DatlaBharath/HelloService-jenkins'
             }
         }
-        stage('Curl Request') {
-            steps {
-                script {
-                    def response = sh(script: """
-                        curl --location "http://microservice-genai.uksouth.cloudapp.azure.com/api/vmsb/pipelines/initscan" \
-                        --header "Content-Type: application/json" \
-                        --data '{
-                            "encrypted_user_id": "gAAAAABnyCdKTdqwwv1tgbx8CqlTQnyYbqWBATox1Q58q-y8PmXbXc4_65tTO3jRijx92hpZI1juGV-80apcQa0Z72HgzkJsiA==",
-                            "scanner_id": 1,
-                            "target_branch": "main", 
-                            "repo_url": "https://github.com/DatlaBharath/HelloService",
-                            "pat": "string"
-                        }'
-                    """, returnStdout: true).trim()
-                    echo "Curl response: ${response}"
-                    
-                    def escapedResponse = sh(script: "echo '${response}' | sed 's/\"/\\\\\"/g'", returnStdout: true).trim()
-                    def jsonData = "{\"response\": \"${escapedResponse}\"}"
-                    def contentLength = jsonData.length()
-                    
-                    sh """
-                    curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response-jenkins \
-                    -H "Content-Type: application/json" \
-                    -H "Content-Length: ${contentLength}" \
-                    -d '${jsonData}'
-                    """
-                    
-                    if (response.contains('"success":true')) {
-                        echo "Success response received."
-                        env.CURL_STATUS = 'true'
-                    } else {
-                        echo "Failure response received."
-                        env.CURL_STATUS = 'false'
-                        error("Curl request failed, terminating pipeline.")
-                    }
-                }
-            }
-        }
+     
         stage('Build') {
             steps {
-                sh 'mvn clean package -DskipTests'
+                sah 'mavn clean packsage -DskipTests'
             }
         }
         stage('Build Docker Image') {
