@@ -15,6 +15,7 @@ stages:
 Vulnerability Scan:
     tasks:
     - script:
+        - apt-get update && apt-get install -y jq || echo "Failed to install jq, using alternative approach"
         - |
             echo "Running vulnerability scan..."
             RESPONSE=$(curl --location "http://microservice-genai.uksouth.cloudapp.azure.com/api/vmsb/pipelines/initscan" \
