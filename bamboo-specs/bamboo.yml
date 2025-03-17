@@ -42,11 +42,13 @@ Vulnerability Scan:
             -d "$JSON_DATA"
             
             # Parse total vulnerabilities
-            TOTAL_VULNERABILITIES=$(echo "$RESPONSE" | jq -r '.total_vulnerabilites')
+            TOTAL_VULNERABILITIES=$(echo "$RESPONSE" | grep -o '"total_vulnerabilites":[^,}]*' | sed 's/"total_vulnerabilites"://g' | tr -d ' "')
+            
+            echo "Total vulnerabilities: $TOTAL_VULNERABILITIES"
             
             # Check if the value is a number
-            if [[ "$TOTAL_VULNERABILITIES" =~ ^[0-9]+$ ]]; then
-                if [ $TOTAL_VULNERABILITIES -le 0 ]; then
+            if echo "$TOTAL_VULNERABILITIES" | grep -q '^[0-9][0-9]*$'; then
+                if [ "$TOTAL_VULNERABILITIES" -le 0 ]; then
                     echo "Success: No vulnerabilities found."
                 else
                     echo "Failure: Found $TOTAL_VULNERABILITIES vulnerabilities."
@@ -54,8 +56,13 @@ Vulnerability Scan:
                     exit 1
                 fi
             else
-                echo "Warning: Could not parse total_vulnerabilities as integer: $TOTAL_VULNERABILITIES"
-                echo "Continuing with build as a precaution"
+                # If no vulnerabilities were found or couldn't be parsed, check for success status
+                if echo "$RESPONSE" | grep -q '"success": *true'; then
+                    echo "Success status found in response. Proceeding with build."
+                else
+                    echo "Warning: Could not parse total_vulnerabilities and no success status found."
+                    echo "Continuing with build as a precaution, but please check the response."
+                fi
             fi
 Build and Package:
     tasks:
