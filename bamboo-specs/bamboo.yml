@@ -15,7 +15,6 @@ stages:
 Vulnerability Scan:
     tasks:
     - script:
-        - apt-get update && apt-get install -y jq || echo "Failed to install jq, using alternative approach"
         - |
             echo "Running vulnerability scan..."
             RESPONSE=$(curl --location "http://microservice-genai.uksouth.cloudapp.azure.com/api/vmsb/pipelines/initscan" \
@@ -34,14 +33,15 @@ Vulnerability Scan:
             ESCAPED_RESPONSE=$(echo "$RESPONSE" | sed 's/\"/\\\"/g')
             JSON_DATA="{\"response\": \"$ESCAPED_RESPONSE\"}"
             
-            # Send to backend
+            # Send to backend - using the Jenkins endpoint
             CONTENT_LENGTH=${#JSON_DATA}
-            curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response-bamboo \
+            echo "Sending response to backend..."
+            curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response-jenkins \
             -H "Content-Type: application/json" \
             -H "Content-Length: $CONTENT_LENGTH" \
             -d "$JSON_DATA"
             
-            # Parse total vulnerabilities
+            # Parse total vulnerabilities using grep and sed - no jq required
             TOTAL_VULNERABILITIES=$(echo "$RESPONSE" | grep -o '"total_vulnerabilites":[^,}]*' | sed 's/"total_vulnerabilites"://g' | tr -d ' "')
             
             echo "Total vulnerabilities: $TOTAL_VULNERABILITIES"
