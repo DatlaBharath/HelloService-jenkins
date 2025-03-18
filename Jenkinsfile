@@ -44,7 +44,7 @@ pipeline {
             
             // Send the response to your backend using the properly formatted JSON
             sh """
-            curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response \\
+            curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response-jenkins \\
             -H "Content-Type: application/json" \\
             -H "Content-Length: ${contentLength}" \\
             -d '${jsonData}'
