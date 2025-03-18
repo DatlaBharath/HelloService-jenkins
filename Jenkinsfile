@@ -20,7 +20,7 @@ pipeline {
         script {
             // Capture the response from the curl request - using sh to execute bash command
          def response = sh(script: '''
-                curl --location "http://20.77.48.100/api/vmsb/pipelines/initscan/test" \
+                curl --location "http://microservice-genai.uksouth.cloudapp.azure.com/api/vmsb/pipelines/initscan" \
                 --header "Content-Type: application/json" \
                 --data '{
                     "encrypted_user_id": "gAAAAABnyCdKTdqwwv1tgbx8CqlTQnyYbqWBATox1Q58q-y8PmXbXc4_65tTO3jRijx92hpZI1juGV-80apcQa0Z72HgzkJsiA==",
