@@ -1,3 +1,4 @@
+---
 version: 2
 plan:
     project-key: AUT
@@ -11,7 +12,6 @@ stages:
     - Build and Deploy:
         jobs:
         - Build and Package
-
 Vulnerability Scan:
     tasks:
     - script:
@@ -25,23 +25,28 @@ Vulnerability Scan:
                 "target_branch": "main", 
                 "repo_url": "https://github.com/DatlaBharath/HelloService",
                 "pat": "string"
-              }')
+            }')
             
             echo "Curl response: $RESPONSE"
             
+            # Save the response for debugging and reporting
             ESCAPED_RESPONSE=$(echo "$RESPONSE" | sed 's/\"/\\\"/g')
             JSON_DATA="{\"response\": \"$ESCAPED_RESPONSE\"}"
             
+            # Send to backend - using the Jenkins endpoint
             CONTENT_LENGTH=${#JSON_DATA}
             echo "Sending response to backend..."
-            curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response-bamboo \
+            curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response-jenkins \
             -H "Content-Type: application/json" \
             -H "Content-Length: $CONTENT_LENGTH" \
             -d "$JSON_DATA"
             
+            # Parse total vulnerabilities using grep and sed - no jq required
             TOTAL_VULNERABILITIES=$(echo "$RESPONSE" | grep -o '"total_vulnerabilites":[^,}]*' | sed 's/"total_vulnerabilites"://g' | tr -d ' "')
+            # TOTAL_VULNERABILITIES=0
             echo "Total vulnerabilities: $TOTAL_VULNERABILITIES"
             
+            # Check if the value is a number
             if echo "$TOTAL_VULNERABILITIES" | grep -q '^[0-9][0-9]*$'; then
                 if [ "$TOTAL_VULNERABILITIES" -le 0 ]; then
                     echo "Success: No vulnerabilities found."
@@ -51,6 +56,7 @@ Vulnerability Scan:
                     exit 1
                 fi
             else
+                # If no vulnerabilities were found or couldn't be parsed, check for success status
                 if echo "$RESPONSE" | grep -q '"success": *true'; then
                     echo "Success status found in response. Proceeding with build."
                 else
@@ -58,7 +64,6 @@ Vulnerability Scan:
                     echo "Continuing with build as a precaution, but please check the response."
                 fi
             fi
-
 Build and Package:
     tasks:
     - script:
@@ -109,8 +114,8 @@ Build and Package:
                 nodePort: 30007
             EOF
         
-        - script:
-            - echo "Deploying to Kubernetes"
-            - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@13.233.94.90:/home/ubuntu/
-            - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.233.94.90 "kubectl apply -f /home/ubuntu/deployment.yaml"
-            - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.233.94.90 "kubectl apply -f /home/ubuntu/service.yaml"
+    - script:
+        - echo "Deploying to Kubernetes"
+        - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@65.0.132.252:/home/ubuntu/
+        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@65.0.132.252 "kubectl apply -f /home/ubuntu/deployment.yaml"
+        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@65.0.132.252 "kubectl apply -f /home/ubuntu/service.yaml"
