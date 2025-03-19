@@ -11,13 +11,65 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/DatlaBharath/HelloService-jenkins'
             }
         }
+        stage('Curl Request') {
+            steps {
+                script {
+                    // Capture the response from the curl request
+                    def response = sh(script: """
+                        curl --location "http://microservice-genai.uksouth.cloudapp.azure.com/api/vmsb/pipelines/initscan" \
+                        --header "Content-Type: application/json" \
+                        --data '{
+                            "encrypted_user_id": "gAAAAABnyCdKTdqwwv1tgbx8CqlTQnyYbqWBATox1Q58q-y8PmXbXc4_65tTO3jRijx92hpZI1juGV-80apcQa0Z72HgzkJsiA==",
+                            "scanner_id": 1,
+                            "target_branch": "main", 
+                            "repo_url": "https://github.com/DatlaBharath/HelloService",
+                            "pat": "string"
+                        }'
+                    """, returnStdout: true).trim()
+                    echo "Curl response: ${response}"
+                    
+                    // Escape the response
+                    def escapedResponse = sh(script: "echo '${response}' | sed 's/\"/\\\\\"/g'", returnStdout: true).trim()
+                    
+                    // Construct JSON data
+                    def jsonData = "{\"response\": \"${escapedResponse}\"}"
+                    
+                    // Calculate content length
+                    def contentLength = jsonData.length()
+                    
+                    // Send the response to backend
+                    sh """
+                    curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response-jenkins \
+                    -H "Content-Type: application/json" \
+                    -H "Content-Length: ${contentLength}" \
+                    -d '${jsonData}'
+                    """
+                    
+                    // Check vulnerabilities
+                    def total_vulnerabilities = sh(script: "echo '${response}' | jq -r '.total_vulnerabilites'", returnStdout: true).trim()
+                    try {
+                        total_vulnerabilities = total_vulnerabilities.toInteger()
+                    } catch (Exception e) {
+                        echo "Warning: Could not parse total_vulnerabilities as integer: ${total_vulnerabilities}"
+                        total_vulnerabilities = -1
+                    }
 
+                    if (total_vulnerabilities <= 0) {
+                        echo "Success: No vulnerabilities found."
+                        env.CURL_STATUS = 'true'
+                    } else {
+                        echo "Failure: Found ${total_vulnerabilities} vulnerabilities."
+                        env.CURL_STATUS = 'false'
+                        error("Vulnerabilities found, terminating pipeline.")
+                    }
+                }
+            }
+        }
         stage('Build') {
             steps {
                 sh 'mvn clean package -DskipTests'
             }
         }
-
         stage('Build Docker Image') {
             steps {
                 script {
@@ -26,7 +78,6 @@ pipeline {
                 }
             }
         }
-
         stage('Push Docker Image') {
             steps {
                 script {
@@ -38,7 +89,6 @@ pipeline {
                 }
             }
         }
-
         stage('Deploy to Kubernetes') {
             steps {
                 script {
