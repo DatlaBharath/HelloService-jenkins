@@ -29,13 +29,11 @@ pipeline {
                     echo "Curl response: ${response}"
 
                     // Escape the response
-                    def escapedResponse = sh(script: "echo \"${response}\" | sed 's/\"/\\\\\"/g'", returnStdout: true).trim()
-
-                    // Construct JSON data
+                    def escapedResponse = sh(script: "echo '${response}' | sed 's/\"/\\\\\"/g'", returnStdout: true).trim()
                     def jsonData = "{\"response\": \"${escapedResponse}\"}"
                     def contentLength = jsonData.length()
 
-                    // Send the response to backend
+                    // Send the response to your backend
                     sh """
                     curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response-jenkins \
                     -H "Content-Type: application/json" \
@@ -43,8 +41,9 @@ pipeline {
                     -d '${jsonData}'
                     """
 
-                    // Check vulnerabilities
-                    def total_vulnerabilities = sh(script: "echo \"${response}\" | jq -r '.total_vulnerabilites'", returnStdout: true).trim()
+                    // Check if the response contains 'success': true
+                    def total_vulnerabilities = sh(script: "echo '${response}' | jq -r '.total_vulnerabilites'", returnStdout: true).trim()
+
                     try {
                         total_vulnerabilities = total_vulnerabilities.toInteger()
                     } catch (Exception e) {
@@ -54,8 +53,10 @@ pipeline {
 
                     if (total_vulnerabilities <= 0) {
                         echo "Success: No vulnerabilities found."
+                        env.CURL_STATUS = 'true'
                     } else {
                         echo "Failure: Found ${total_vulnerabilities} vulnerabilities."
+                        env.CURL_STATUS = 'false'
                         error("Vulnerabilities found, terminating pipeline.")
                     }
                 }
