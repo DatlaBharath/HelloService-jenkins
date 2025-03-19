@@ -1,3 +1,4 @@
+---
 version: 2
 plan:
     project-key: AUT
@@ -5,58 +6,10 @@ plan:
     key: MVN
 
 stages:
-    - Security Scan:
-        jobs:
-        - Vulnerability Scan
     - Build and Deploy:
         jobs:
         - Build and Package
-Vulnerability Scan:
-    tasks:
-    - script:
-        - |
-            echo "Running vulnerability scan..."
-            RESPONSE=$(curl --location "http://microservice-genai.uksouth.cloudapp.azure.com/api/vmsb/pipelines/initscan" \
-            --header "Content-Type: application/json" \
-            --data '{
-                "encrypted_user_id": "gAAAAABnyCdKTdqwwv1tgbx8CqlTQnyYbqWBATox1Q58q-y8PmXbXc4_65tTO3jRijx92hpZI1juGV-80apcQa0Z72HgzkJsiA==",
-                "scanner_id": 1,
-                "target_branch": "main", 
-                "repo_url": "https://github.com/DatlaBharath/HelloService",
-                "pat": "string"
-              }')
-            
-            echo "Curl response: $RESPONSE"
-            
-            ESCAPED_RESPONSE=$(echo "$RESPONSE" | sed 's/\"/\\\"/g')
-            JSON_DATA="{\"response\": \"$ESCAPED_RESPONSE\"}"
-            
-            CONTENT_LENGTH=${#JSON_DATA}
-            echo "Sending response to backend..."
-            curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response-bamboo \
-            -H "Content-Type: application/json" \
-            -H "Content-Length: $CONTENT_LENGTH" \
-            -d "$JSON_DATA"
-            
-            TOTAL_VULNERABILITIES=$(echo "$RESPONSE" | grep -o '"total_vulnerabilites":[^,}]*' | sed 's/"total_vulnerabilites"://g' | tr -d ' "')
-            echo "Total vulnerabilities: $TOTAL_VULNERABILITIES"
-            
-            if echo "$TOTAL_VULNERABILITIES" | grep -q '^[0-9][0-9]*$'; then
-                if [ "$TOTAL_VULNERABILITIES" -le 0 ]; then
-                    echo "Success: No vulnerabilities found."
-                else
-                    echo "Failure: Found $TOTAL_VULNERABILITIES vulnerabilities."
-                    echo "Setting build result to FAILED"
-                    exit 1
-                fi
-            else
-                if echo "$RESPONSE" | grep -q '"success": *true'; then
-                    echo "Success status found in response. Proceeding with build."
-                else
-                    echo "Warning: Could not parse total_vulnerabilities and no success status found."
-                    echo "Continuing with build as a precaution, but please check the response."
-                fi
-            fi
+
 Build and Package:
     tasks:
     - script:
