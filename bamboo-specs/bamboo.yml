@@ -2,7 +2,7 @@
 version: 2
 plan:
     project-key: AUT
-    name: Mavesn Build and Docker Deploy Plan
+    name: Maven and Build and Docker Deploy Plan
     key: MAVN
 
 stages:
