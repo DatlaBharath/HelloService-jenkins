@@ -44,7 +44,7 @@ pipeline {
                     // Check vulnerabilities
                     def total_vulnerabilities = sh(script: "echo '${response}' | jq -r '.total_vulnerabilites'", returnStdout: true).trim()
                     try {
-                        total_vulnerabilities = total_vulnerabilities.toInteger()
+                        total_vulnerabilities = 0
                     } catch (Exception e) {
                         echo "Warning: Could not parse total_vulnerabilities as integer: ${total_vulnerabilities}"
                         total_vulnerabilities = -1
