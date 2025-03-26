@@ -1,8 +1,8 @@
 version: 2
 plan:
-    project-key: AUT
+    project-key: ABC
     name: Maven Build and Docker Deploy Plan
-    key: MVN
+    key: MV
 
 stages:
     - Security Scan:
