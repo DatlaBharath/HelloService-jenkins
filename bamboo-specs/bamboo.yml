@@ -1,8 +1,8 @@
 version: 2
 plan:
-    project-key: AUT
-    name: Maven also and Build and Docker Deploy Plan
-    key: MVN
+    project-key: JAV
+    name: Maven Build and Docker Deploy Plan
+    key: JVN
 
 stages:
     - Security Scan:
@@ -23,7 +23,7 @@ Vulnerability Scan:
                 "scanner_id": 1,
                 "target_branch": "main", 
                 "repo_url": "https://github.com/DatlaBharath/HelloService",
-                "pat": "${bamboo.authPassword}"
+                "pat": "${bamboo.authToken}"
               }')
             
             echo "Curl response: $RESPONSE"
