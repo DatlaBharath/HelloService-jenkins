@@ -2,7 +2,7 @@
 version: 2
 plan:
     project-key: AUT
-    name: Maven Build and Docker Deploy Plan
+    name: Maven Build and also Docker Deploy Plan
     key: ABC
 
 stages:
@@ -13,4 +13,4 @@ stages:
 Build and Package:
     tasks:
     - script:
-        - echo "hello"
+        - echo $MyVar
