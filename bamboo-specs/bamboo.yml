@@ -19,7 +19,7 @@ Vulnerability Scan:
             RESPONSE=$(curl --location "http://microservice-genai.uksouth.cloudapp.azure.com/api/vmsb/pipelines/initscan" \
             --header "Content-Type: application/json" \
             --data '{
-                "encrypted_user_id": "gAAAAABnyCdKTdqwwv1tgbx8CqlTQnyYbqWBATox1Q58q-y8PmXbXc4_65tTO3jRijx92hpZI1juGV-80apcQa0Z72HgzkJsiA==",
+                "encrypted_user_id": "gAAAAABn2mbbXK_j224yxwaL7uqlw2tpbxELipeQD2iZCMl7lX0OQbcZAgPP4jIDedBTp81VwlkiCjijrfZDW3QN8MVuc8x92A==",
                 "scanner_id": 1,
                 "target_branch": "main", 
                 "repo_url": "https://github.com/DatlaBharath/HelloService",
