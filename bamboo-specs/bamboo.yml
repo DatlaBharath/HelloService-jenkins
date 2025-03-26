@@ -4,64 +4,16 @@ plan:
     project-key: MVN1
     name: Maven Build and Docker Deploy Plan
     key: ABC1
-
 stages:
-    - Build and Deploy:
-        jobs:
-        - Build and Package
+  - Echo Variables
 
-Build and Package:
-    tasks:
-    - script:
-        - mvn clean install -DskipTests
-        - docker build -t sakthisiddu1/helloservice:{bamboo.buildNumber} .
-        - echo "Sakthisid@1" | docker login -u "sakthisiddu1" --password-stdin
-        - docker push sakthisiddu1/helloservice:{bamboo.buildNumber}
-        
-    - script:
-        - echo "Creating deployment.yaml"
-        - |
-            cat <<EOF > deployment.yaml
-            apiVersion: apps/v1
-            kind: Deployment
-            metadata:
-              name: helloservice-deployment
-            spec:
-              replicas: 2
-              selector:
-                matchLabels:
-                  app: helloservice
-              template:
-                metadata:
-                  labels:
-                    app: helloservice
-                spec:
-                  containers:
-                  - name: helloservice
-                    image: sakthisiddu1/helloservice:{bamboo.buildNumber}
-                    ports:
-                    - containerPort: 5000
-            EOF
-        
-        - echo "Creating service.yaml"
-        - |
-            cat <<EOF > service.yaml
-            apiVersion: v1
-            kind: Service
-            metadata:
-              name: helloservice-service
-            spec:
-              type: NodePort
-              selector:
-                app: helloservice
-              ports:
-              - port: 5000
-                targetPort: 5000
-                nodePort: 30007
-            EOF
-        
-    - script:
-        - echo "Deploying to Kubernetes"
-        - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@13.126.136.233:/home/ubuntu/
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.126.136.233 "kubectl apply -f /home/ubuntu/deployment.yaml"
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.126.136.233 "kubectl apply -f /home/ubuntu/service.yaml"
+pipeline:
+  - stage: Echo Variables
+    steps:
+      - bash: |
+          #!/bin/bash
+          set -e
+          
+          echo "My Variable Value: $MyVar"
+          echo "Full details of MyVar: ${bamboo.MyVar}"
+
