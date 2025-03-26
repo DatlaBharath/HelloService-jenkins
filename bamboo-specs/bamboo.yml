@@ -6,15 +6,14 @@ plan:
   key: ABC1
 
 stages:
-  - Echo Variables
-
-pipeline:
   - stage: Echo Variables
-    steps:
-      - bash:
-          script: |
-            #!/bin/bash
-            set -e
-            
-            echo "My Variable Value: $MyVar"
-            echo "Full details of MyVar: ${bamboo.MyVar}"
+    jobs:
+      - job: Echo Job
+        tasks:
+          - bash:
+              script: |
+                #!/bin/bash
+                set -e
+                
+                echo "My Variable Value: $MyVar"
+                echo "Full details of MyVar: ${bamboo.MyVar}"
