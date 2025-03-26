@@ -13,5 +13,4 @@ stages:
 Build and Package:
     tasks:
     - script:
-        script: |
-            echo "MyVar value is: $MyVar"
+        echo "MyVar value is: $MyVar"
