@@ -1,19 +1,17 @@
 ---
 version: 2
 plan:
-  project-key: AUT
-  name: Maven Build and Docker Deploy Plan
-  key: ABC1
+    project-key: MVN
+    name: Maven Build and Docker Deploy Plan
+    key: ABC
 
 stages:
-  - stage: Echo Variables
-    jobs:
-      - job: Echo Job
-        tasks:
-          - bash:
-              script: |
-                #!/bin/bash
-                set -e
-                
-                echo "My Variable Value: $MyVar"
-                echo "Full details of MyVar: ${bamboo.MyVar}"
+    - Build and Deploy:
+        jobs:
+        - Build and Package
+
+Build and Package:
+    tasks:
+    - script:
+        script: |
+            echo "MyVar value is: $MyVar"
