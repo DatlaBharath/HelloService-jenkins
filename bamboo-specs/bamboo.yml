@@ -13,4 +13,5 @@ stages:
 Build and Package:
     tasks:
     - script:
+        - echo "hello"
         - echo $MyVar
