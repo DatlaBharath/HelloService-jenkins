@@ -17,7 +17,7 @@ Build and Package:
         - docker build -t sakthisiddu1/helloservice:${bamboo.buildNumber} .
         - echo "Sakthisid@1" | docker login -u "sakthisiddu1" --password-stdin
         - docker push sakthisiddu1/helloservice:${bamboo.buildNumber}
-
+        
     - script:
         - echo "Creating deployment.yaml"
         - |
@@ -42,7 +42,7 @@ Build and Package:
                     ports:
                     - containerPort: 5000
             EOF
-
+        
         - echo "Creating service.yaml"
         - |
             cat <<EOF > service.yaml
@@ -59,9 +59,9 @@ Build and Package:
                 targetPort: 5000
                 nodePort: 30007
             EOF
-
+        
     - script:
         - echo "Deploying to Kubernetes"
-        - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@15.207.107.23:/home/ubuntu/
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@15.207.107.23 "kubectl apply -f /home/ubuntu/deployment.yaml"
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@15.207.107.23 "kubectl apply -f /home/ubuntu/service.yaml"
+        - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@13.234.59.202:/home/ubuntu/
+        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.234.59.202 "kubectl apply -f /home/ubuntu/deployment.yaml"
+        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.234.59.202 "kubectl apply -f /home/ubuntu/service.yaml"
