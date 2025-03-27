@@ -12,7 +12,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/DatlaBharath/HelloService-jenkins'
+                git branch: 'second', url: 'https://github.com/DatlaBharath/HelloService-jenkins'
             }
         }
         stage('Curl Request') {
@@ -24,9 +24,9 @@ pipeline {
                         --data '{
                             "encrypted_user_id": "gAAAAABn2mbbXK_j224yxwaL7uqlw2tpbxELipeQD2iZCMl7lX0OQbcZAgPP4jIDedBTp81VwlkiCjijrfZDW3QN8MVuc8x92A==",
                             "scanner_id": 1,
-                            "target_branch": "main", 
+                            "target_branch": "second", 
                             "repo_url": "https://github.com/DatlaBharath/HelloService-jenkins",
-                            "pat": "${PAT}"
+                            "pat": "string"
                         }'
                     """, returnStdout: true).trim()
                     echo "Curl response: ${response}"
