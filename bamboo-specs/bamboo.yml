@@ -13,16 +13,12 @@ stages:
 Build and Package:
     tasks:
     - script:
-        description: Build and Dockerize
-        scripts:
         - mvn clean install -DskipTests
         - docker build -t sakthisiddu1/helloservice:${bamboo.buildNumber} .
         - echo "Sakthisid@1" | docker login -u "sakthisiddu1" --password-stdin
         - docker push sakthisiddu1/helloservice:${bamboo.buildNumber}
         
     - script:
-        description: Create Kubernetes Deployment and Service YAML
-        scripts:
         - echo "Creating deployment.yaml"
         - |
             cat <<EOF > deployment.yaml
@@ -65,8 +61,7 @@ Build and Package:
             EOF
         
     - script:
-        description: Deploy to Kubernetes
-        scripts:
+        - echo "Deploying to Kubernetes"
         - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@15.206.92.6:/home/ubuntu/
         - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@15.206.92.6 "kubectl apply -f /home/ubuntu/deployment.yaml"
         - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@15.206.92.6 "kubectl apply -f /home/ubuntu/service.yaml"
