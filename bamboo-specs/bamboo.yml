@@ -1,9 +1,9 @@
 ---
 version: 2
 plan:
-    project-key: AUT
+    project-key: MVN
     name: Maven Build and Docker Deploy Plan
-    key: MV
+    key: ABC
 
 stages:
     - Build and Deploy:
@@ -14,10 +14,10 @@ Build and Package:
     tasks:
     - script:
         - mvn clean install -DskipTests
-        - docker build -t sakthisiddu1/helloservice-jenkins:${bamboo.buildNumber} .
+        - docker build -t sakthisiddu1/helloservice:${bamboo.buildNumber} .
         - echo "Sakthisid@1" | docker login -u "sakthisiddu1" --password-stdin
-        - docker push sakthisiddu1/helloservice-jenkins:${bamboo.buildNumber}
-
+        - docker push sakthisiddu1/helloservice:${bamboo.buildNumber}
+        
     - script:
         - echo "Creating deployment.yaml"
         - |
@@ -38,11 +38,11 @@ Build and Package:
                 spec:
                   containers:
                   - name: helloservice
-                    image: sakthisiddu1/helloservice-jenkins:${bamboo.buildNumber}
+                    image: sakthisiddu1/helloservice:${bamboo.buildNumber}
                     ports:
                     - containerPort: 5000
             EOF
-
+        
         - echo "Creating service.yaml"
         - |
             cat <<EOF > service.yaml
@@ -59,9 +59,9 @@ Build and Package:
                 targetPort: 5000
                 nodePort: 30007
             EOF
-
+        
     - script:
         - echo "Deploying to Kubernetes"
-        - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@3.110.220.64:/home/ubuntu/
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@3.110.220.64 "kubectl apply -f /home/ubuntu/deployment.yaml"
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@3.110.220.64 "kubectl apply -f /home/ubuntu/service.yaml"
+        - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@:/home/ubuntu/
+        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@ "kubectl apply -f /home/ubuntu/deployment.yaml"
+        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@ "kubectl apply -f /home/ubuntu/service.yaml"
