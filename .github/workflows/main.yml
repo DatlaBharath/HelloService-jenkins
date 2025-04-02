@@ -91,5 +91,5 @@ jobs:
               nodePort: 30007
           " > service.yaml
 
-          ssh -o StrictHostKeyChecking=no -i /home/ubuntu/.ssh/test.pem ubuntu@3.110.160.47 "kubectl apply -f -" < deployment.yaml
-          ssh -i /home/ubuntu/.ssh/test.pem -o StrictHostKeyChecking=no ubuntu@3.110.160.47 "kubectl apply -f -" < service.yaml
+          ssh -o StrictHostKeyChecking=no -i /home/ubuntu/.ssh/test.pem ubuntu@3.111.217.179 "kubectl apply -f -" < deployment.yaml
+          ssh -i /home/ubuntu/.ssh/test.pem -o StrictHostKeyChecking=no ubuntu@3.111.217.179 "kubectl apply -f -" < service.yaml
