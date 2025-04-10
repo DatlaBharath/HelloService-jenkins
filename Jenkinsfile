@@ -85,8 +85,8 @@ pipeline {
                     sh """echo "${deploymentYaml}" > deployment.yaml"""
                     sh """echo "${serviceYaml}" > service.yaml"""
 
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@15.207.87.83 "kubectl apply -f -" < deployment.yaml'
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@15.207.87.83 "kubectl apply -f -" < service.yaml'
+                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.235.51.75 "kubectl apply -f -" < deployment.yaml'
+                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.235.51.75 "kubectl apply -f -" < service.yaml'
                 }
             }
         }
