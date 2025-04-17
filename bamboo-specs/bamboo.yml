@@ -2,7 +2,7 @@
 version: 2
 plan:
     project-key: AUT
-    name: Maven Build and Docker Deploy Plan
+    name: Maven and Build and Docker Deploy Plan
     key: JAV
 
 stages:
@@ -13,12 +13,16 @@ stages:
 Build and Package:
     tasks:
     - script:
+        description: Build and Dockerize
+        scripts:
         - mvn clean install -DskipTests
-        - docker build -t sakthisiddu1/helloservice:${bamboo.buildNumber} .
+        - docker build -t ${bamboo.dockerUser}/helloservice:${bamboo.buildNumber} .
         - echo ${bamboo.dockerPass} | docker login -u ${bamboo.dockerUser} --password-stdin
         - docker push ${bamboo.dockerUser}/helloservice:${bamboo.buildNumber}
-        
+
     - script:
+        description: Create Kubernetes Deployment YAML
+        scripts:
         - echo "Creating deployment.yaml"
         - |
             cat <<EOF > deployment.yaml
@@ -38,11 +42,14 @@ Build and Package:
                 spec:
                   containers:
                   - name: helloservice
-                    image: sakthisiddu1/helloservice:${bamboo.buildNumber}
+                    image: ${bamboo.dockerUser}/helloservice:${bamboo.buildNumber}
                     ports:
                     - containerPort: 5000
             EOF
-        
+
+    - script:
+        description: Create Kubernetes Service YAML
+        scripts:
         - echo "Creating service.yaml"
         - |
             cat <<EOF > service.yaml
@@ -59,8 +66,10 @@ Build and Package:
                 targetPort: 5000
                 nodePort: 30007
             EOF
-        
+
     - script:
+        description: Deploy to Kubernetes
+        scripts:
         - echo "Deploying to Kubernetes"
         - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@52.66.160.163:/home/ubuntu/
         - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@52.66.160.163 "kubectl apply -f /home/ubuntu/deployment.yaml"
