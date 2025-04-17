@@ -15,8 +15,8 @@ Build and Package:
     - script:
         - mvn clean install -DskipTests
         - docker build -t sakthisiddu1/helloservice:${bamboo.buildNumber} .
-        - echo "Sakthisid@1" | docker login -u "sakthisiddu1" --password-stdin
-        - docker push sakthisiddu1/helloservice:${bamboo.buildNumber}
+        - echo ${bamboo.dockerPass} | docker login -u ${bamboo.dockerUser} --password-stdin
+        - docker push ${bamboo.dockerUser}/helloservice:${bamboo.buildNumber}
         
     - script:
         - echo "Creating deployment.yaml"
