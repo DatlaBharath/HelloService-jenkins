@@ -14,10 +14,10 @@ Build and Package:
     tasks:
     - script:
         - mvn clean install -DskipTests
-        - docker build -t sakthisiddu1/helloservice:${bamboo.buildNumber} .
-        - echo "Sakthisid@1" | docker login -u "sakthisiddu1" --password-stdin
-        - docker push sakthisiddu1/helloservice:${bamboo.buildNumber}
-        
+        - docker build -t ${bamboo.dockerUser}/helloservice-jenkins:${bamboo.buildNumber} .
+        - echo ${bamboo.dockerPass} | docker login -u ${bamboo.dockerUser} --password-stdin
+        - docker push ${bamboo.dockerUser}/helloservice-jenkins:${bamboo.buildNumber}
+
     - script:
         - echo "Creating deployment.yaml"
         - |
@@ -38,11 +38,12 @@ Build and Package:
                 spec:
                   containers:
                   - name: helloservice
-                    image: sakthisiddu1/helloservice:${bamboo.buildNumber}
+                    image: ${bamboo.dockerUser}/helloservice-jenkins:${bamboo.buildNumber}
                     ports:
                     - containerPort: 5000
             EOF
-        
+
+    - script:
         - echo "Creating service.yaml"
         - |
             cat <<EOF > service.yaml
@@ -59,9 +60,8 @@ Build and Package:
                 targetPort: 5000
                 nodePort: 30007
             EOF
-        
+
     - script:
-        - echo "Deploying to Kubernetes"
-        - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@13.235.24.107:/home/ubuntu/
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.235.24.107 "kubectl apply -f /home/ubuntu/deployment.yaml"
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.235.24.107 "kubectl apply -f /home/ubuntu/service.yaml"
+        - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@13.126.240.134:/home/ubuntu/
+        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.126.240.134 "kubectl apply -f /home/ubuntu/deployment.yaml"
+        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.126.240.134 "kubectl apply -f /home/ubuntu/service.yaml"
