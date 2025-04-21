@@ -3,7 +3,7 @@ version: 2
 plan:
     project-key: AUT
     name: Maven Build and Docker Deploy Plan
-    key: MVN
+    key: JAV
 
 stages:
     - Build and Deploy:
@@ -62,6 +62,6 @@ Build and Package:
             EOF
 
     - script:
-        - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@65.1.64.160:/home/ubuntu/
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@65.1.64.160 "kubectl apply -f /home/ubuntu/deployment.yaml"
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@65.1.64.160 "kubectl apply -f /home/ubuntu/service.yaml"
+        - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@3.110.213.254:/home/ubuntu/
+        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@3.110.213.254 "kubectl apply -f /home/ubuntu/deployment.yaml"
+        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@3.110.213.254 "kubectl apply -f /home/ubuntu/service.yaml"
