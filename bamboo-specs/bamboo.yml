@@ -43,7 +43,6 @@ Build and Package:
                     - containerPort: 5000
             EOF
 
-    - script:
         - echo "Creating service.yaml"
         - |
             cat <<EOF > service.yaml
@@ -62,6 +61,6 @@ Build and Package:
             EOF
 
     - script:
-        - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@3.110.213.254:/home/ubuntu/
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@3.110.213.254 "kubectl apply -f /home/ubuntu/deployment.yaml"
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@3.110.213.254 "kubectl apply -f /home/ubuntu/service.yaml"
+        - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@13.234.59.234:/home/ubuntu/
+        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.234.59.234 "kubectl apply -f /home/ubuntu/deployment.yaml"
+        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.234.59.234 "kubectl apply -f /home/ubuntu/service.yaml"
