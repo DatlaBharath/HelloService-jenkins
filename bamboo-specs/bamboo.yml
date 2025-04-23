@@ -17,7 +17,7 @@ Build and Package:
         - docker build -t ${bamboo.dockerUser}/helloservice-jenkins:${bamboo.buildNumber} .
         - echo ${bamboo.dockerPass} | docker login -u ${bamboo.dockerUser} --password-stdin
         - docker push ${bamboo.dockerUser}/helloservice-jenkins:${bamboo.buildNumber}
-
+        
     - script:
         - echo "Creating deployment.yaml"
         - |
@@ -42,8 +42,7 @@ Build and Package:
                     ports:
                     - containerPort: 5000
             EOF
-
-    - script:
+        
         - echo "Creating service.yaml"
         - |
             cat <<EOF > service.yaml
@@ -60,8 +59,9 @@ Build and Package:
                 targetPort: 5000
                 nodePort: 30007
             EOF
-
+        
     - script:
-        - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@3.110.181.123:/home/ubuntu/
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@3.110.181.123 "kubectl apply -f /home/ubuntu/deployment.yaml"
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@3.110.181.123 "kubectl apply -f /home/ubuntu/service.yaml"
+        - echo "Deploying to Kubernetes"
+        - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@13.233.99.110:/home/ubuntu/
+        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.233.99.110 "kubectl apply -f /home/ubuntu/deployment.yaml"
+        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.233.99.110 "kubectl apply -f /home/ubuntu/service.yaml"
