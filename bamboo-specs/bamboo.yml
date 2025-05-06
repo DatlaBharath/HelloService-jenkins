@@ -33,7 +33,7 @@ Vulnerability Scan:
             JSON_DATA="{\"response\": \"$ESCAPED_RESPONSE\"}"
             
             CONTENT_LENGTH=${#JSON_DATA}
-            echo "Sending response to backend..."
+            echo "Sending response to backend...."
             curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response-bamboo?sessionId=adminEC23C9F6-77AD-9E64-7C02-A41EF19C7CC3 \
             -H "Content-Type: application/json" \
             -H "Content-Length: $CONTENT_LENGTH" \
