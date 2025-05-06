@@ -16,7 +16,7 @@ Vulnerability Scan:
     tasks:
     - script:
         - |
-            echo "Running vulnerability scan..."
+            echo "Running vulnerability scan...."
             RESPONSE=$(curl --location "http://microservice-genai.uksouth.cloudapp.azure.com/api/vmsb/pipelines/initscan" \
             --header "Content-Type: application/json" \
             --data '{
