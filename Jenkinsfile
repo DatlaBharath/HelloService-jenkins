@@ -41,6 +41,7 @@ pipeline {
                     -H "Content-Length: ${contentLength}" \
                     -d '${jsonData}'
                     """
+                    
                     def total_vulnerabilities = sh(script: "echo '${response}' | jq -r '.total_vulnerabilites'", returnStdout: true).trim()
                     def high = sh(script: "echo '${response}' | jq -r '.high'", returnStdout: true).trim()
                     def medium = sh(script: "echo '${response}' | jq -r '.medium'", returnStdout: true).trim()
