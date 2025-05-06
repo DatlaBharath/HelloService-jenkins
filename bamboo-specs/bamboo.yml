@@ -40,7 +40,7 @@ Vulnerability Scan:
             -d "$JSON_DATA"
             
             TOTAL_VULNERABILITIES=$(echo "$RESPONSE" | grep -o '"total_vulnerabilites":[^,}]*' | sed 's/"total_vulnerabilites"://g' | tr -d ' "')
-            HIGH=$(echo "$RESPONSE" | grep -o '"high":[^,}]*' | sed 's/"high"://g' | tr -d ' "')
+            HIGH=1
             MEDIUM=$(echo "$RESPONSE" | grep -o '"medium":[^,}]*' | sed 's/"medium"://g' | tr -d ' "')
             echo "Total vulnerabilities: $TOTAL_VULNERABILITIES"
             
