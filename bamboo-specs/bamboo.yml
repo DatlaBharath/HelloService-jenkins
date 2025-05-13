@@ -1,9 +1,9 @@
 ---
 version: 2
 plan:
-    project-key: MNV
-    name: Maven Build and Docker Deploy Plan2
-    key: MNV
+    project-key: AUT
+    name: Maven Build and Docker Deploy Plan
+    key: MVN
 
 stages:
     - Build and Deploy:
@@ -62,6 +62,6 @@ Build and Package:
         
     - script:
         - echo "Deploying to Kubernetes"
-        - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@13.232.252.134:/home/ubuntu/
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.232.252.134 "kubectl apply -f /home/ubuntu/deployment.yaml"
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.232.252.134 "kubectl apply -f /home/ubuntu/service.yaml"
+        - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@13.201.13.179:/home/ubuntu/
+        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.201.13.179 "kubectl apply -f /home/ubuntu/deployment.yaml"
+        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.201.13.179 "kubectl apply -f /home/ubuntu/service.yaml"
