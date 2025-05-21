@@ -12,7 +12,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/DatlaBharath/HelloService-jenkins'
+                git branch: 'second', url: 'https://github.com/DatlaBharath/HelloService-jenkins'
             }
         }
         stage('Curl Request') {
@@ -24,7 +24,7 @@ pipeline {
                         --data '{
                             "encrypted_user_id": "gAAAAABnyCdKTdqwwv1tgbx8CqlTQnyYbqWBATox1Q58q-y8PmXbXc4_65tTO3jRijx92hpZI1juGV-80apcQa0Z72HgzkJsiA==",
                             "scanner_id": 1,
-                            "target_branch": "main", 
+                            "target_branch": "second", 
                             "repo_url": "https://github.com/DatlaBharath/HelloService-jenkins",
                             "pat": "${PAT}"
                         }'
@@ -35,9 +35,12 @@ pipeline {
                     
                     def jsonData = "{\"response\": \"${escapedResponse}\"}"
                     
+                    def contentLength = jsonData.length()
+                    
                     sh """
                     curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response-jenkins?sessionId=adminEC23C9F6-77AD-9E64-7C02-A41EF19C7CC3 \
                     -H "Content-Type: application/json" \
+                    -H "Content-Length: ${contentLength}" \
                     -d '${jsonData}'
                     """
                     
@@ -115,6 +118,7 @@ pipeline {
                             ports:
                             - containerPort: 5000
                     """
+                    
                     def serviceYaml = """
                     apiVersion: v1
                     kind: Service
@@ -130,8 +134,10 @@ pipeline {
                         nodePort: 30007
                       type: NodePort
                     """
+                    
                     sh """echo "${deploymentYaml}" > deployment.yaml"""
                     sh """echo "${serviceYaml}" > service.yaml"""
+                    
                     sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.234.240.51 "kubectl apply -f -" < deployment.yaml'
                     sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.234.240.51 "kubectl apply -f -" < service.yaml'
                 }
