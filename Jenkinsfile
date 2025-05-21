@@ -139,7 +139,6 @@ pipeline {
             }
         }
     }
-
     post {
         success {
             echo 'Deployment was successful'
