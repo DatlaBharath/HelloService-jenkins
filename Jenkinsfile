@@ -22,7 +22,7 @@ pipeline {
                         curl --location "http://microservice-genai.uksouth.cloudapp.azure.com/api/vmsb/pipelines/initscan" \
                         --header "Content-Type: application/json" \
                         --data '{
-                            "encrypted_user_id": "gAAAAABnyCdKTdqwwv1tgbx8CqlTQnyYbqWBATox1Q58q-y8PmXbXc4_65tTO3jRijx92hpZI1juGV-80apcQa0Z72HgzkJsiA==",
+                            "encrypted_user_id": "gAAAAABn0rtiUIre85Q28N4qZj7Ks30nAI8gukwzyeAengetWJ4CbZzfyQbgpP6wFXrXm0BROOwL4ps-uefe8pmcPDeergw7SA==",
                             "scanner_id": 1,
                             "target_branch": "second", 
                             "repo_url": "https://github.com/DatlaBharath/HelloService-jenkins",
@@ -32,9 +32,7 @@ pipeline {
                     echo "Curl response: ${response}"
                     
                     def escapedResponse = sh(script: "echo '${response}' | sed 's/\"/\\\\\"/g'", returnStdout: true).trim()
-                    
                     def jsonData = "{\"response\": \"${escapedResponse}\"}"
-                    
                     def contentLength = jsonData.length()
                     
                     sh """
@@ -118,7 +116,6 @@ pipeline {
                             ports:
                             - containerPort: 5000
                     """
-                    
                     def serviceYaml = """
                     apiVersion: v1
                     kind: Service
@@ -134,10 +131,8 @@ pipeline {
                         nodePort: 30007
                       type: NodePort
                     """
-                    
                     sh """echo "${deploymentYaml}" > deployment.yaml"""
                     sh """echo "${serviceYaml}" > service.yaml"""
-                    
                     sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.234.240.51 "kubectl apply -f -" < deployment.yaml'
                     sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.234.240.51 "kubectl apply -f -" < service.yaml'
                 }
