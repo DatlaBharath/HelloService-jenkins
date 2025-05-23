@@ -21,8 +21,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    def repoName = 'helloservice-jenkins'
-                    def imageName = "ratneshpuskar/${repoName.toLowerCase()}:${env.BUILD_NUMBER}"
+                    def imageName = "ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}"
                     sh "docker build -t ${imageName} ."
                 }
             }
@@ -33,8 +32,7 @@ pipeline {
                 script {
                     withCredentials([usernamePassword(credentialsId: 'dockerhub_credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
                         sh 'echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_USERNAME} --password-stdin'
-                        def repoName = 'helloservice-jenkins'
-                        def imageName = "ratneshpuskar/${repoName.toLowerCase()}:${env.BUILD_NUMBER}"
+                        def imageName = "ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}"
                         sh "docker push ${imageName}"
                     }
                 }
@@ -87,8 +85,8 @@ pipeline {
                     sh """echo "${deploymentYaml}" > deployment.yaml"""
                     sh """echo "${serviceYaml}" > service.yaml"""
 
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@35.154.93.163 "kubectl apply -f -" < deployment.yaml'
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@35.154.93.163 "kubectl apply -f -" < service.yaml'
+                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@43.205.241.78 "kubectl apply -f -" < deployment.yaml'
+                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@43.205.241.78 "kubectl apply -f -" < service.yaml'
                 }
             }
         }
