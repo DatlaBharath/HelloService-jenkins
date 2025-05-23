@@ -22,7 +22,7 @@ Vulnerability Scan:
                 "encrypted_user_id": "gAAAAABn0rtiUIre85Q28N4qZj7Ks30nAI8gukwzyeAengetWJ4CbZzfyQbgpP6wFXrXm0BROOwL4ps-uefe8pmcPDeergw7SA==",
                 "scanner_id": 1,
                 "target_branch": "main", 
-                "repo_url": "https://github.com/DatlaBharath/HelloService",
+                "repo_url": "https://github.com/DatlaBharath/HelloService-jenkins",
                 "pat": "${bamboo.authToken}"
               }')
             
@@ -111,6 +111,6 @@ Build and Package:
         
     - script:
         - echo "Deploying to Kubernetes"
-        - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@43.205.178.153:/home/ubuntu/
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@43.205.178.153 "kubectl apply -f /home/ubuntu/deployment.yaml"
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@43.205.178.153 "kubectl apply -f /home/ubuntu/service.yaml"
+        - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@13.232.245.114:/home/ubuntu/
+        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.232.245.114 "kubectl apply -f /home/ubuntu/deployment.yaml"
+        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.232.245.114 "kubectl apply -f /home/ubuntu/service.yaml"
