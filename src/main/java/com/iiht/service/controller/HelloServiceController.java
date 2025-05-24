@@ -66,6 +66,8 @@ public class HelloServiceController {
             return ResponseEntity.ok((num1 + num2) + "");
         } catch (NumberFormatException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid input: both arguments must be integers.");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred.");
         }
     }
     
@@ -77,9 +79,11 @@ public class HelloServiceController {
             for(int i = 1; i <= num; i++) {
                 fact *= i;
             }
-            return ResponseEntity.ok(fact + "" + header.toString());
+            return ResponseEntity.ok(fact + "");
         } catch (NumberFormatException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid input: argument must be an integer.");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred.");
         }
     }
 }
