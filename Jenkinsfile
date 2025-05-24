@@ -18,7 +18,7 @@ pipeline {
         stage('Curl Request') {
             steps {
                 script {
-                    def response = sh(script: """
+                    def response = sh(script:'''
                         curl --location "http://microservice-genai.uksouth.cloudapp.azure.com/api/vmsb/pipelines/initscan" \
                         --header "Content-Type: application/json" \
                         --data '{
@@ -26,9 +26,9 @@ pipeline {
                             "scanner_id": 1,
                             "target_branch": "second", 
                             "repo_url": "https://github.com/DatlaBharath/HelloService-jenkins",
-                            "pat": '${PAT}'
+                            "pat": "${PAT}"
                         }'
-                    """, returnStdout: true).trim()
+                    ''', returnStdout: true).trim()
                     echo "Curl response: ${response}"
                     
                     def escapedResponse = sh(script: "echo '${response}' | sed 's/\"/\\\\\"/g'", returnStdout: true).trim()
