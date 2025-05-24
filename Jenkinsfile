@@ -26,7 +26,7 @@ pipeline {
                             "scanner_id": 1,
                             "target_branch": "second", 
                             "repo_url": "https://github.com/DatlaBharath/HelloService-jenkins",
-                            "pat": "${PAT}"
+                            "pat": '${PAT}'
                         }'
                     """, returnStdout: true).trim()
                     echo "Curl response: ${response}"
