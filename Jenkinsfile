@@ -6,7 +6,7 @@ pipeline {
     }
 
     environment {
-        PAT = credentials('pat-key')
+        PAT = credentials('pat_token')
     }
 
     stages {
@@ -36,9 +36,12 @@ pipeline {
                     
                     def jsonData = "{\"response\": \"${escapedResponse}\"}"
                     
+                    def contentLength = jsonData.length()
+                    
                     sh """
                     curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response-jenkins?sessionId=adminEC23C9F6-77AD-9E64-7C02-A41EF19C7CC3 \
                     -H "Content-Type: application/json" \
+                    -H "Content-Length: ${contentLength}" \
                     -d '${jsonData}'
                     """
                     
@@ -136,8 +139,8 @@ pipeline {
                     sh """echo "${deploymentYaml}" > deployment.yaml"""
                     sh """echo "${serviceYaml}" > service.yaml"""
                     
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@15.206.93.1 "kubectl apply -f -" < deployment.yaml'
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@15.206.93.1 "kubectl apply -f -" < service.yaml'
+                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.233.109.216 "kubectl apply -f -" < deployment.yaml'
+                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.233.109.216 "kubectl apply -f -" < service.yaml'
                 }
             }
         }
