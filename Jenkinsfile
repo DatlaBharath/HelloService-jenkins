@@ -6,7 +6,7 @@ pipeline {
     }
 
     environment {
-        PAT = credentials('pat_token')
+        PAT = credentials('pat-key')
     }
 
     stages {
