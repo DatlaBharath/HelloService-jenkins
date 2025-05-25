@@ -15,6 +15,8 @@ import java.util.regex.Pattern;
 public class HelloServiceController {
 
     private static final Pattern INTEGER_PATTERN = Pattern.compile("-?\\d+");
+    private static final int MAX_NUMBER_FOR_ADDITION = 10000; // Set a sensible limit for addition
+    private static final int MAX_FACTORIAL_INPUT = 20; // Limit factorial calculation to reasonable bounds
 
     @GetMapping
     public String hello() {
@@ -66,10 +68,18 @@ public class HelloServiceController {
         if (!INTEGER_PATTERN.matcher(a).matches() || !INTEGER_PATTERN.matcher(b).matches()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid input: both arguments must be integers.");
         }
-        
-        int num1 = Integer.parseInt(a);
-        int num2 = Integer.parseInt(b);
-        return ResponseEntity.ok(String.valueOf(num1 + num2));
+
+        try {
+            int num1 = Integer.parseInt(a);
+            int num2 = Integer.parseInt(b);
+            if (Math.abs(num1) > MAX_NUMBER_FOR_ADDITION || Math.abs(num2) > MAX_NUMBER_FOR_ADDITION) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid input: integers should be within acceptable range.");
+            }
+            
+            return ResponseEntity.ok(String.valueOf(num1 + num2));
+        } catch (NumberFormatException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid input: mathematical operation failed.");
+        }
     }
 
     @GetMapping("/fact/{a}")
@@ -77,12 +87,20 @@ public class HelloServiceController {
         if (!INTEGER_PATTERN.matcher(a).matches()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid input: argument must be an integer.");
         }
-        
-        int num = Integer.parseInt(a);
-        int fact = 1;
-        for (int i = 1; i <= num; i++) {
-            fact *= i;
+
+        try {
+            int num = Integer.parseInt(a);
+            if (num < 0 || num > MAX_FACTORIAL_INPUT) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid input: integer should be between 0 and " + MAX_FACTORIAL_INPUT);
+            }
+
+            int fact = 1;
+            for (int i = 1; i <= num; i++) {
+                fact *= i;
+            }
+            return ResponseEntity.ok(String.valueOf(fact));
+        } catch (NumberFormatException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid input: mathematical operation failed.");
         }
-        return ResponseEntity.ok(String.valueOf(fact));
     }
 }
