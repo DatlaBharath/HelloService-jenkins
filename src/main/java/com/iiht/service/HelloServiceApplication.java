@@ -15,6 +15,7 @@ import org.springframework.security.oauth2.config.annotation.web.configuration.E
 import org.springframework.security.oauth2.config.annotation.web.configuration.ResourceServerConfigurerAdapter;
 import org.springframework.security.oauth2.config.annotation.web.configurers.ResourceServerSecurityConfigurer;
 import org.springframework.web.bind.annotation.*;
+import org.owasp.encoder.Encode;// Imported OWASP encoder library
 
 @SpringBootApplication
 @EnableDiscoveryClient
@@ -45,8 +46,8 @@ public class HelloServiceApplication {
         }
         
         private String sanitize(String input) {
-            // Basic sanitation to prevent XSS and similar injection attacks
-            return input.replaceAll("[<>]", "");
+            // Using OWASP Java Encoder to sanitize input
+            return Encode.forHtml(input);
         }
     }
     
