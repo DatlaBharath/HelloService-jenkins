@@ -12,6 +12,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.oauth2.config.annotation.web.configuration.EnableResourceServer;
+import org.springframework.security.oauth2.config.annotation.web.configuration.ResourceServerConfigurerAdapter;
+import org.springframework.security.oauth2.config.annotation.web.configurers.ResourceServerSecurityConfigurer;
 import org.springframework.web.bind.annotation.*;
 
 @SpringBootApplication
@@ -54,9 +56,22 @@ public class HelloServiceApplication {
         protected void configure(HttpSecurity http) throws Exception {
             http
                 .authorizeRequests()
-                .anyRequest().authenticated()
+                .antMatchers("/api/**").authenticated()
+                .anyRequest().permitAll()
                 .and()
-                .oauth2ResourceServer().jwt();
+                .oauth2ResourceServer()
+                .jwt()
+                .and()
+                .csrf().disable()
+                .headers()
+                .xssProtection()
+                .and()
+                .contentSecurityPolicy("script-src 'self'");
+        }
+        
+        @Override
+        public void configure(ResourceServerSecurityConfigurer resources) throws Exception {
+            resources.resourceId("resource-id").stateless(true);
         }
     }
 

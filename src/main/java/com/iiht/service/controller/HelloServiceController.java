@@ -25,7 +25,7 @@ public class HelloServiceController {
 
     private static final Pattern INTEGER_PATTERN = Pattern.compile("-?\\d+");
     private static final int MAX_NUMBER_FOR_ADDITION = 10000;
-    private static final int MAX_FACTORIAL_INPUT = 20; 
+    private static final int MAX_FACTORIAL_INPUT = 20;
 
     private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
     private final Bandwidth limit = Bandwidth.classic(20, Refill.greedy(20, Duration.ofMinutes(1)));
@@ -91,7 +91,12 @@ public class HelloServiceController {
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid input: integers should be within acceptable range.");
                 }
                 
-                return ResponseEntity.ok(String.valueOf(num1 + num2));
+                try {
+                    return ResponseEntity.ok(String.valueOf(Math.addExact(num1, num2)));
+                } catch (ArithmeticException ae) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("ArithmeticError: Addition overflow occurred.");
+                }
+
             } catch (NumberFormatException e) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid input: mathematical operation failed.");
             }
@@ -111,11 +116,16 @@ public class HelloServiceController {
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid input: integer should be between 0 and " + MAX_FACTORIAL_INPUT);
                 }
 
-                int fact = 1;
-                for (int i = 1; i <= num; i++) {
-                    fact *= i;
+                try {
+                    int fact = 1;
+                    for (int i = 1; i <= num; i++) {
+                        fact = Math.multiplyExact(fact, i);
+                    }
+                    return ResponseEntity.ok(String.valueOf(fact));
+                } catch (ArithmeticException ae) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("ArithmeticError: Factorial overflow occurred.");
                 }
-                return ResponseEntity.ok(String.valueOf(fact));
+
             } catch (NumberFormatException e) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid input: mathematical operation failed.");
             }
