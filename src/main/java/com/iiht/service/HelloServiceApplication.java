@@ -4,6 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.validation.annotation.Validated;
+import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import org.springframework.context.annotation.Bean;
@@ -11,6 +12,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.oauth2.config.annotation.web.configuration.EnableResourceServer;
+import org.springframework.web.bind.annotation.*;
 
 @SpringBootApplication
 @EnableDiscoveryClient
@@ -29,7 +31,7 @@ public class HelloServiceApplication {
         private String name;
 
         public User(String name) {
-            this.name = name;
+            this.name = sanitize(name);
         }
 
         public String getName() {
@@ -37,7 +39,12 @@ public class HelloServiceApplication {
         }
 
         public void setName(String name) {
-            this.name = name;
+            this.name = sanitize(name);
+        }
+        
+        private String sanitize(String input) {
+            // Basic sanitation to prevent XSS and similar injection attacks
+            return input.replaceAll("[<>]", "");
         }
     }
     
@@ -56,5 +63,16 @@ public class HelloServiceApplication {
     @Bean
     public SecurityConfiguration securityConfiguration() {
         return new SecurityConfiguration();
+    }
+}
+
+@RestController
+@RequestMapping("/api")
+public class UserController {
+    
+    @PostMapping("/user")
+    public String createUser(@Valid @RequestBody User user) {
+        // More comprehensive validation can be added here if needed
+        return "User " + user.getName() + " created.";
     }
 }
