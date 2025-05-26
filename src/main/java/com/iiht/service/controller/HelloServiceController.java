@@ -25,7 +25,7 @@ public class HelloServiceController {
 
     private static final Pattern INTEGER_PATTERN = Pattern.compile("-?\\d+");
     private static final int MAX_NUMBER_FOR_ADDITION = 10000;
-    private static final int MAX_FACTORIAL_INPUT = 20;
+    private static final int MAX_FACTORIAL_INPUT = 30;
 
     private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
     private final Bandwidth limit = Bandwidth.classic(20, Refill.greedy(20, Duration.ofMinutes(1)));
