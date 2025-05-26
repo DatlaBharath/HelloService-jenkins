@@ -1,8 +1,11 @@
 version: 2
 plan:
     project-key: AUT
-    name: Maven Build ad Docker Deploy Plan
+    name: Maven Build and Docker Deploy Plan
     key: MVN
+triggers:
+  - polling:
+      period: '10'
 
 stages:
     - Security Scan:
@@ -21,7 +24,7 @@ Vulnerability Scan:
             --data '{
                 "encrypted_user_id": "gAAAAABn0rtiUIre85Q28N4qZj7Ks30nAI8gukwzyeAengetWJ4CbZzfyQbgpP6wFXrXm0BROOwL4ps-uefe8pmcPDeergw7SA==",
                 "scanner_id": 1,
-                "target_branch": "main", 
+                "target_branch": "second", 
                 "repo_url": "https://github.com/DatlaBharath/HelloService-jenkins",
                 "pat": "${bamboo.authPassword}"
               }')
@@ -111,6 +114,6 @@ Build and Package:
         
     - script:
         - echo "Deploying to Kubernetes"
-        - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@13.232.245.114:/home/ubuntu/
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.232.245.114 "kubectl apply -f /home/ubuntu/deployment.yaml"
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.232.245.114 "kubectl apply -f /home/ubuntu/service.yaml"
+        - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@13.201.0.248:/home/ubuntu/
+        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.201.0.248 "kubectl apply -f /home/ubuntu/deployment.yaml"
+        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.201.0.248 "kubectl apply -f /home/ubuntu/service.yaml"
