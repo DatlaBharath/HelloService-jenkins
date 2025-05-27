@@ -1,3 +1,4 @@
+```java
 package com.iiht.service.controller;
 
 import org.springframework.http.HttpHeaders;
@@ -8,6 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.HtmlUtils;
+import org.springframework.validation.annotation.Validated;
 
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.Bandwidth;
@@ -17,10 +19,10 @@ import io.github.bucket4j.ConsumptionProbe;
 import java.time.Duration;
 import java.util.regex.Pattern;
 import java.util.concurrent.ConcurrentHashMap;
-
 import java.util.Map;
 
 @RestController
+@Validated
 public class HelloServiceController {
 
     private static final Pattern INTEGER_PATTERN = Pattern.compile("-?\\d+");
@@ -90,7 +92,7 @@ public class HelloServiceController {
                 if (Math.abs(num1) > MAX_NUMBER_FOR_ADDITION || Math.abs(num2) > MAX_NUMBER_FOR_ADDITION) {
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid input: integers should be within acceptable range.");
                 }
-                
+
                 try {
                     return ResponseEntity.ok(String.valueOf(Math.addExact(num1, num2)));
                 } catch (ArithmeticException ae) {
@@ -143,3 +145,4 @@ public class HelloServiceController {
         }
     }
 }
+```

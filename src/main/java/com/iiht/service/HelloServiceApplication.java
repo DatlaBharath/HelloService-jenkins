@@ -6,6 +6,7 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.validation.annotation.Validated;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -15,7 +16,7 @@ import org.springframework.security.oauth2.config.annotation.web.configuration.E
 import org.springframework.security.oauth2.config.annotation.web.configuration.ResourceServerConfigurerAdapter;
 import org.springframework.security.oauth2.config.annotation.web.configurers.ResourceServerSecurityConfigurer;
 import org.springframework.web.bind.annotation.*;
-import org.owasp.encoder.Encode;// Imported OWASP encoder library
+import org.owasp.encoder.Encode;
 
 @SpringBootApplication
 @EnableDiscoveryClient
@@ -28,9 +29,9 @@ public class HelloServiceApplication {
     
     @Validated
     public static class User {
-        
         @NotNull(message = "Name cannot be null")
         @Size(min = 2, max = 30, message = "Name must be between 2 and 30 characters")
+        @Pattern(regexp = "^[A-Za-z]+$", message = "Name must contain only alphabets")
         private String name;
 
         public User(String name) {
@@ -46,7 +47,6 @@ public class HelloServiceApplication {
         }
         
         private String sanitize(String input) {
-            // Using OWASP Java Encoder to sanitize input
             return Encode.forHtml(input);
         }
     }
@@ -88,7 +88,6 @@ public class UserController {
     
     @PostMapping("/user")
     public String createUser(@Valid @RequestBody User user) {
-        // More comprehensive validation can be added here if needed
         return "User " + user.getName() + " created.";
     }
 }
