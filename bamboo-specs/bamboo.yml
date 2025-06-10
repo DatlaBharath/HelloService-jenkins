@@ -2,7 +2,7 @@
 version: 2
 plan:
     project-key: AUT
-    name: Maven and Build and Docker Deploy Plan
+    name: Maven also Build and Docker Deploy Plan
     key: MVN
 triggers:
   - polling:
