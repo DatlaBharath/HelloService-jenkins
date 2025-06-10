@@ -17,9 +17,9 @@ Build and Package:
     tasks:
     - script:
         - mvn clean install -DskipTests
-        - docker build -t ${bamboo.dockerUser}/helloservice-jenkins:${bamboo.buildNumber} .
+        - docker build -t ${bamboo.dockerUser}/helloservice:${bamboo.buildNumber} .
         - echo ${bamboo.dockerPass} | docker login -u ${bamboo.dockerUser} --password-stdin
-        - docker push ${bamboo.dockerUser}/helloservice-jenkins:${bamboo.buildNumber}
+        - docker push ${bamboo.dockerUser}/helloservice:${bamboo.buildNumber}
         
     - script:
         - echo "Creating deployment.yaml"
@@ -28,20 +28,20 @@ Build and Package:
             apiVersion: apps/v1
             kind: Deployment
             metadata:
-              name: helloservice-deployment
+            name: helloservice-deployment
             spec:
-              replicas: 2
-              selector:
+            replicas: 2
+            selector:
                 matchLabels:
-                  app: helloservice
-              template:
+                app: helloservice
+            template:
                 metadata:
-                  labels:
+                labels:
                     app: helloservice
                 spec:
-                  containers:
-                  - name: helloservice
-                    image: ${bamboo.dockerUser}/helloservice-jenkins:${bamboo.buildNumber}
+                containers:
+                - name: helloservice
+                    image: ${bamboo.dockerUser}/helloservice:${bamboo.buildNumber}
                     ports:
                     - containerPort: 5000
             EOF
@@ -52,19 +52,19 @@ Build and Package:
             apiVersion: v1
             kind: Service
             metadata:
-              name: helloservice-service
+            name: helloservice-service
             spec:
-              type: NodePort
-              selector:
+            type: NodePort
+            selector:
                 app: helloservice
-              ports:
-              - port: 5000
+            ports:
+            - port: 5000
                 targetPort: 5000
                 nodePort: 30007
             EOF
         
     - script:
         - echo "Deploying to Kubernetes"
-        - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@13.204.79.45:/home/ubuntu/
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.204.79.45 "kubectl apply -f /home/ubuntu/deployment.yaml"
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.204.79.45 "kubectl apply -f /home/ubuntu/service.yaml"
+        - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@13.126.145.53:/home/ubuntu/
+        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.126.145.53 "kubectl apply -f /home/ubuntu/deployment.yaml"
+        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.126.145.53 "kubectl apply -f /home/ubuntu/service.yaml"
