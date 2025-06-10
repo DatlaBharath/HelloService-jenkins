@@ -1,71 +1,25 @@
+---
 version: 2
 plan:
     project-key: AUT
-    name: Maven Build ad Docker Deploy Plan
+    name: Maven Build and Docker Deploy Plan
     key: MVN
+triggers:
+  - polling:
+      period: '10'
 
 stages:
-    - Security Scan:
-        jobs:
-        - Vulnerability Scan
     - Build and Deploy:
         jobs:
         - Build and Package
-Vulnerability Scan:
-    tasks:
-    - script:
-        - |
-            echo "Running vulnerability scan..."
-            RESPONSE=$(curl --location "http://microservice-genai.uksouth.cloudapp.azure.com/api/vmsb/pipelines/initscan" \
-            --header "Content-Type: application/json" \
-            --data '{
-                "encrypted_user_id": "gAAAAABn0rtiUIre85Q28N4qZj7Ks30nAI8gukwzyeAengetWJ4CbZzfyQbgpP6wFXrXm0BROOwL4ps-uefe8pmcPDeergw7SA==",
-                "scanner_id": 1,
-                "target_branch": "main", 
-                "repo_url": "https://github.com/DatlaBharath/HelloService-jenkins",
-                "pat": "${bamboo.authPassword}"
-              }')
-            
-            echo "Curl response: $RESPONSE"
-            
-            ESCAPED_RESPONSE=$(echo "$RESPONSE" | sed 's/\"/\\\"/g')
-            JSON_DATA="{\"response\": \"$ESCAPED_RESPONSE\"}"
-            
-            CONTENT_LENGTH=${#JSON_DATA}
-            echo "Sending response to backend..."
-            curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response-bamboo?sessionId=adminEC23C9F6-77AD-9E64-7C02-A41EF19C7CC3 \
-            -H "Content-Type: application/json" \
-            -H "Content-Length: $CONTENT_LENGTH" \
-            -d "$JSON_DATA"
-            
-            TOTAL_VULNERABILITIES=$(echo "$RESPONSE" | grep -o '"total_vulnerabilites":[^,}]*' | sed 's/"total_vulnerabilites"://g' | tr -d ' "')
-            HIGH=$(echo "$RESPONSE" | grep -o '"high":[^,}]*' | sed 's/"high"://g' | tr -d ' "')
-            MEDIUM=$(echo "$RESPONSE" | grep -o '"medium":[^,}]*' | sed 's/"medium"://g' | tr -d ' "')
-            echo "Total vulnerabilities: $TOTAL_VULNERABILITIES"
-            
-            if echo "$TOTAL_VULNERABILITIES" | grep -q '^[0-9][0-9]*$'; then
-                if [ "$HIGH" -le 0 ] && [ "$MEDIUM" -le 0 ]; then
-                    echo "Success: No high and medium vulnerabilities found."
-                else
-                    echo "Failure: Found $TOTAL_VULNERABILITIES vulnerabilities. $HIGH high vulnerabilities. $MEDIUM medium vulnerabilities"
-                    echo "Setting build result to FAILED"
-                    exit 1
-                fi
-            else
-                if echo "$RESPONSE" | grep -q '"success": *true'; then
-                    echo "Success status found in response. Proceeding with build."
-                else
-                    echo "Warning: Could not parse total_vulnerabilities and no success status found."
-                    echo "Continuing with build as a precaution, but please check the response."
-                fi
-            fi
+
 Build and Package:
     tasks:
     - script:
         - mvn clean install -DskipTests
-        - docker build -t ${bamboo.dockerUser}/helloservice:${bamboo.buildNumber} .
+        - docker build -t ${bamboo.dockerUser}/helloservice-jenkins:${bamboo.buildNumber} .
         - echo ${bamboo.dockerPass} | docker login -u ${bamboo.dockerUser} --password-stdin
-        - docker push ${bamboo.dockerUser}/helloservice:${bamboo.buildNumber}
+        - docker push ${bamboo.dockerUser}/helloservice-jenkins:${bamboo.buildNumber}
         
     - script:
         - echo "Creating deployment.yaml"
@@ -87,7 +41,7 @@ Build and Package:
                 spec:
                   containers:
                   - name: helloservice
-                    image: ${bamboo.dockerUser}/helloservice:${bamboo.buildNumber}
+                    image: ${bamboo.dockerUser}/helloservice-jenkins:${bamboo.buildNumber}
                     ports:
                     - containerPort: 5000
             EOF
@@ -111,6 +65,6 @@ Build and Package:
         
     - script:
         - echo "Deploying to Kubernetes"
-        - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@13.232.245.114:/home/ubuntu/
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.232.245.114 "kubectl apply -f /home/ubuntu/deployment.yaml"
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.232.245.114 "kubectl apply -f /home/ubuntu/service.yaml"
+        - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@13.204.79.45:/home/ubuntu/
+        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.204.79.45 "kubectl apply -f /home/ubuntu/deployment.yaml"
+        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.204.79.45 "kubectl apply -f /home/ubuntu/service.yaml"
