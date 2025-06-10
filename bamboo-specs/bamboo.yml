@@ -2,7 +2,7 @@
 version: 2
 plan:
     project-key: AUT
-    name: Maven Build and Docker Deploy Plan
+    name: Maven and Build and Docker Deploy Plan
     key: MVN
 triggers:
   - polling:
@@ -28,19 +28,19 @@ Build and Package:
             apiVersion: apps/v1
             kind: Deployment
             metadata:
-            name: helloservice-deployment
+              name: helloservice-deployment
             spec:
-            replicas: 2
-            selector:
+              replicas: 2
+              selector:
                 matchLabels:
-                app: helloservice
-            template:
+                  app: helloservice
+              template:
                 metadata:
-                labels:
+                  labels:
                     app: helloservice
                 spec:
-                containers:
-                - name: helloservice
+                  containers:
+                  - name: helloservice
                     image: ${bamboo.dockerUser}/helloservice:${bamboo.buildNumber}
                     ports:
                     - containerPort: 5000
@@ -52,13 +52,13 @@ Build and Package:
             apiVersion: v1
             kind: Service
             metadata:
-            name: helloservice-service
+              name: helloservice-service
             spec:
-            type: NodePort
-            selector:
+              type: NodePort
+              selector:
                 app: helloservice
-            ports:
-            - port: 5000
+              ports:
+              - port: 5000
                 targetPort: 5000
                 nodePort: 30007
             EOF
