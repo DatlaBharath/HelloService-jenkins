@@ -9,9 +9,9 @@ triggers:
       period: '10'
 
 stages:
-    - Build and Deploy:
-        jobs:
-        - Build and Package
+  - Build and Deploy:
+      jobs:
+      - Build and Package
 
 Build and Package:
     tasks:
@@ -65,6 +65,6 @@ Build and Package:
         
     - script:
         - echo "Deploying to Kubernetes"
-        - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@52.66.101.75:/home/ubuntu/
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@52.66.101.75 "kubectl apply -f /home/ubuntu/deployment.yaml"
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@52.66.101.75 "kubectl apply -f /home/ubuntu/service.yaml"
+        - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@13.127.208.46:/home/ubuntu/
+        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.127.208.46 "kubectl apply -f /home/ubuntu/deployment.yaml"
+        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.127.208.46 "kubectl apply -f /home/ubuntu/service.yaml"
