@@ -1,8 +1,7 @@
 pipeline {
     agent any
-
-    environment {
-        TOOL = 'Maven'
+    tools {
+        maven 'Maven'
     }
 
     stages {
@@ -14,7 +13,6 @@ pipeline {
 
         stage('Build') {
             steps {
-                echo "Building with ${TOOL}"
                 sh 'mvn clean package -DskipTests'
             }
         }
@@ -82,11 +80,12 @@ pipeline {
                           nodePort: 30007
                           type: NodePort
                     """
+                    
                     sh """echo "${deploymentYaml}" > deployment.yaml"""
                     sh """echo "${serviceYaml}" > service.yaml"""
 
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@3.110.132.109 "kubectl apply -f -" < deployment.yaml'
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@3.110.132.109 "kubectl apply -f -" < service.yaml'
+                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.232.84.32 "kubectl apply -f -" < deployment.yaml'
+                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.232.84.32 "kubectl apply -f -" < service.yaml'
                 }
             }
         }
