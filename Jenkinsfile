@@ -63,7 +63,6 @@ pipeline {
                             image: ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}
                             ports:
                             - containerPort: 5000
-
                     """
 
                     def serviceYaml = """
@@ -84,15 +83,13 @@ pipeline {
                     sh """echo "${deploymentYaml}" > deployment.yaml"""
                     sh """echo "${serviceYaml}" > service.yaml"""
 
-                    sh 'scp -i /var/test.pem -o StrictHostKeyChecking=no deployment.yaml ubuntu@13.126.6.63:~/'
-                    sh 'scp -i /var/test.pem -o StrictHostKeyChecking=no service.yaml ubuntu@13.126.6.63:~/'
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.126.6.63 "kubectl apply -f ~/deployment.yaml"'
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.126.6.63 "kubectl apply -f ~/service.yaml"'
+                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.126.6.63 "kubectl apply -f -" < deployment.yaml'
+                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.126.6.63 "kubectl apply -f -" < service.yaml'
                 }
             }
         }
     }
-
+    
     post {
         success {
             echo 'Deployment was successful'
