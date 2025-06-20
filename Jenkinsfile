@@ -7,7 +7,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/DatlaBharath/HelloService-jenkins'
+                git branch: 'main', url: "https://github.com/DatlaBharath/HelloService-jenkins"
             }
         }
 
@@ -64,7 +64,7 @@ pipeline {
                                   ports:
                                   - containerPort: 5000
                     """
-                    
+
                     def serviceYaml = """
                     apiVersion: v1
                     kind: Service
@@ -83,12 +83,13 @@ pipeline {
                     sh """echo "${deploymentYaml}" > deployment.yaml"""
                     sh """echo "${serviceYaml}" > service.yaml"""
 
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.232.84.32 "kubectl apply -f -" < deployment.yaml'
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.232.84.32 "kubectl apply -f -" < service.yaml'
+                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.126.6.63 "kubectl apply -f deployment.yaml"'
+                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.126.6.63 "kubectl apply -f service.yaml"'
                 }
             }
         }
     }
+
     post {
         success {
             echo 'Deployment was successful'
