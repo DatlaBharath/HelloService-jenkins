@@ -20,7 +20,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    def imageName = "ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}"
+                    def imageName = "ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER.toString().toLowerCase()}"
                     sh "docker build -t ${imageName} ."
                 }
             }
@@ -31,7 +31,7 @@ pipeline {
                 script {
                     withCredentials([usernamePassword(credentialsId: 'dockerhub_credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
                         sh 'echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_USERNAME} --password-stdin'
-                        def imageName = "ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}"
+                        def imageName = "ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER.toString().toLowerCase()}"
                         sh "docker push ${imageName}"
                     }
                 }
@@ -60,7 +60,7 @@ spec:
     spec:
       containers:
       - name: helloservice
-        image: ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}
+        image: ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER.toString().toLowerCase()}
         ports:
         - containerPort: 5000
 """
