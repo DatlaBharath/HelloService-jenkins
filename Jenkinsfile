@@ -3,20 +3,17 @@ pipeline {
     tools {
         maven 'Maven'
     }
-
     stages {
         stage('Checkout') {
             steps {
                 git branch: 'main', url: 'https://github.com/DatlaBharath/HelloService-jenkins'
             }
         }
-
         stage('Build') {
             steps {
                 sh 'mvn clean package -DskipTests'
             }
         }
-
         stage('Build Docker Image') {
             steps {
                 script {
@@ -25,7 +22,6 @@ pipeline {
                 }
             }
         }
-
         stage('Push Docker Image') {
             steps {
                 script {
@@ -37,7 +33,6 @@ pipeline {
                 }
             }
         }
-
         stage('Deploy to Kubernetes') {
             steps {
                 script {
@@ -64,7 +59,6 @@ spec:
         ports:
         - containerPort: 5000
 """
-
                     def serviceYaml = """
 apiVersion: v1
 kind: Service
@@ -81,16 +75,15 @@ spec:
   type: NodePort
 """
 
-                    sh """echo "$deploymentYaml" > deployment.yaml"""
-                    sh """echo "$serviceYaml" > service.yaml"""
-
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.201.68.143 "kubectl apply -f -" < deployment.yaml'
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.201.68.143 "kubectl apply -f -" < service.yaml'
+                    sh 'echo "$deploymentYaml" > deployment.yaml'
+                    sh 'echo "$serviceYaml" > service.yaml'
+                    sh 'scp -i /var/test.pem deployment.yaml service.yaml ubuntu@13.126.248.37:/tmp/'
+                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.126.248.37 "kubectl apply -f /tmp/deployment.yaml"'
+                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.126.248.37 "kubectl apply -f /tmp/service.yaml"'
                 }
             }
         }
     }
-
     post {
         success {
             echo 'Deployment was successful'
