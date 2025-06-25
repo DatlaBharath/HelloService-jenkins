@@ -1,10 +1,5 @@
 pipeline {
     agent any
-
-    environment {
-        DOCKER_IMAGE = "ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}"
-    }
-
     tools {
         maven 'Maven'
     }
@@ -16,7 +11,7 @@ pipeline {
             }
         }
 
-        stage('Build Maven Project') {
+        stage('Build') {
             steps {
                 sh 'mvn clean package -DskipTests'
             }
@@ -24,21 +19,22 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh "docker build -t $DOCKER_IMAGE ."
-            }
-        }
-
-        stage('Docker Login') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub_credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
-                    sh 'echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_USERNAME} --password-stdin'
+                script {
+                    def imageName = "ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}"
+                    sh "docker build -t ${imageName} ."
                 }
             }
         }
 
         stage('Push Docker Image') {
             steps {
-                sh "docker push $DOCKER_IMAGE"
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub_credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
+                        sh "echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_USERNAME} --password-stdin"
+                        def imageName = "ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}"
+                        sh "docker push ${imageName}"
+                    }
+                }
             }
         }
 
@@ -64,7 +60,7 @@ spec:
     spec:
       containers:
       - name: helloservice
-        image: $DOCKER_IMAGE
+        image: ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}
         ports:
         - containerPort: 5000
 """
@@ -85,11 +81,11 @@ spec:
   type: NodePort
 """
 
-                    sh "echo '$deploymentYaml' > deployment.yaml"
-                    sh "echo '$serviceYaml' > service.yaml"
+                    sh """echo "$deploymentYaml" > deployment.yaml"""
+                    sh """echo "$serviceYaml" > service.yaml"""
 
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.127.81.210 "kubectl apply -f -" < deployment.yaml'
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.127.81.210 "kubectl apply -f -" < service.yaml'
+                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.235.51.166 "kubectl apply -f -" < deployment.yaml'
+                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.235.51.166 "kubectl apply -f -" < service.yaml'
                 }
             }
         }
