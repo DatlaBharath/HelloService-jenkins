@@ -15,9 +15,10 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/DatlaBharath/HelloService-jenkins'
             }
         }
-       stage('Curl Request') {
+        stage('Curl Request') {
             steps {
                 script {
+                    // Capture the response from the curl request
                     def response = sh(script: """
                         curl --location "http://microservice-genai.uksouth.cloudapp.azure.com/api/vmsb/pipelines/initscan" \
                         --header "Content-Type: application/json" \
@@ -29,25 +30,31 @@ pipeline {
                             "pat": "${PAT}"
                         }'
                     """, returnStdout: true).trim()
-
+                    // Log the response for debugging
                     echo "Curl response: ${response}"
 
-                    def escapedResponse = sh(script: "echo '${response}' | sed 's/\"/\\\\\"/g'", returnStdout: true).trim()
+                    // Escape the response using the same sed approach from GitHub Actions
+                    def escapedResponse = sh(script: "echo '${response}' | sed 's/"/\\"/g'", returnStdout: true).trim()
 
+                    // Construct JSON data properly
                     def jsonData = "{\"response\": \"${escapedResponse}\"}"
+
+                    // Calculate the content length of the JSON data
                     def contentLength = jsonData.length()
 
+                    // Send the response to your backend using the properly formatted JSON
                     sh """
                     curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response-jenkins?sessionId=adminEC23C9F6-77AD-9E64-7C02-A41EF19C7CC3 \
                     -H "Content-Type: application/json" \
                     -H "Content-Length: ${contentLength}" \
                     -d '${jsonData}'
                     """
-
+                    // Check if the response contains 'success': true
                     def total_vulnerabilities = sh(script: "echo '${response}' | jq -r '.total_vulnerabilites'", returnStdout: true).trim()
                     def high = sh(script: "echo '${response}' | jq -r '.high'", returnStdout: true).trim()
                     def medium = sh(script: "echo '${response}' | jq -r '.medium'", returnStdout: true).trim()
 
+                    // Convert string to integer for comparison
                     try {
                         total_vulnerabilities = total_vulnerabilities.toInteger()
                         high = high.toInteger()
@@ -57,6 +64,7 @@ pipeline {
                         total_vulnerabilities = -1
                     }
 
+                    // Check vulnerability count and set environment variable accordingly
                     if (high + medium <= 0) {
                         echo "Success: No high and medium vulnerabilities found."
                         env.CURL_STATUS = 'true'
