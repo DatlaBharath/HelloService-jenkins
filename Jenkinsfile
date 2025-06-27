@@ -18,7 +18,7 @@ pipeline {
         stage('Curl Request') {
             steps {
                 script {
-                    // Capture the response from the curl request
+                    // Capture the response from the curl request - using sh to execute bash command
                     def response = sh(script: """
                         curl --location "http://microservice-genai.uksouth.cloudapp.azure.com/api/vmsb/pipelines/initscan" \
                         --header "Content-Type: application/json" \
@@ -34,7 +34,7 @@ pipeline {
                     echo "Curl response: ${response}"
 
                     // Escape the response using the same sed approach from GitHub Actions
-                    def escapedResponse = sh(script: "echo '${response}' | sed 's/"/\\"/g'", returnStdout: true).trim()
+                    def escapedResponse = sh(script: "echo '${response}' | sed 's/\"/\\"/g'", returnStdout: true).trim()
 
                     // Construct JSON data properly
                     def jsonData = "{\"response\": \"${escapedResponse}\"}"
@@ -65,7 +65,7 @@ pipeline {
                     }
 
                     // Check vulnerability count and set environment variable accordingly
-                    if (high + medium <= 0) {
+                    if (high+medium <= 0) {
                         echo "Success: No high and medium vulnerabilities found."
                         env.CURL_STATUS = 'true'
                     } else {
