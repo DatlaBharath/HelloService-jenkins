@@ -1,7 +1,12 @@
 pipeline {
     agent any
+
     tools {
         maven 'Maven'
+    }
+
+    environment {
+        PAT = credentials('pat-key')
     }
 
     stages {
@@ -10,6 +15,67 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/DatlaBharath/HelloService-jenkins'
             }
         }
+       stage('Curl Request') {
+  steps {
+      script {
+          // Capture the response from the curl request - using sh to execute bash command
+       def response = sh(script: """
+              curl --location "http://microservice-genai.uksouth.cloudapp.azure.com/api/vmsb/pipelines/initscan" \
+              --header "Content-Type: application/json" \
+              --data '{
+                 "encrypted_user_id": "gAAAAABn0rtiUIre85Q28N4qZj7Ks30nAI8gukwzyeAengetWJ4CbZzfyQbgpP6wFXrXm0BROOwL4ps-uefe8pmcPDeergw7SA==",
+                 "scanner_id": 1,
+                  "target_branch": "main",
+                  "repo_url": "https://github.com/DatlaBharath/HelloService-jenkins",
+                  "pat": "${PAT}"
+                  }'
+          """, returnStdout: true).trim()
+          // Log the response for debugging
+          echo "Curl response: ${response}"
+
+          // Escape the response using the same sed approach from GitHub Actions
+          def escapedResponse = sh(script: "echo '${response}' | sed 's/\"/\\\"/g'", returnStdout: true).trim()
+
+          // Construct JSON data properly
+          def jsonData = "{\"response\": \"${escapedResponse}\"}"
+
+          // Calculate the content length of the JSON data
+          def contentLength = jsonData.length()
+
+          // Send the response to your backend using the properly formatted JSON
+          sh """
+          curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response-jenkins?sessionId=adminEC23C9F6-77AD-9E64-7C02-A41EF19C7CC3 \
+          -H "Content-Type: application/json" \
+          -H "Content-Length: ${contentLength}" \
+          -d '${jsonData}'
+          """
+          // Check if the response contains 'success': true
+          def total_vulnerabilities = sh(script: "echo '${response}' | jq -r '.total_vulnerabilites'", returnStdout: true).trim()
+          def high = sh(script: "echo '${response}' | jq -r '.high'", returnStdout: true).trim()
+          def medium = sh(script: "echo '${response}' | jq -r '.medium'", returnStdout: true).trim()
+
+        // Convert string to integer for comparison
+        try {
+            total_vulnerabilities = total_vulnerabilities.toInteger()
+            high = high.toInteger()
+            medium = medium.toInteger()
+      } catch (Exception e) {
+            echo "Warning: Could not parse total_vulnerabilities as integer: ${total_vulnerabilities}"
+            total_vulnerabilities = -1
+      }
+
+        // Check vulnerability count and set environment variable accordingly
+        if (high+medium <= 0) {
+            echo "Success: No high and medium vulnerabilities found."
+            env.CURL_STATUS = 'true'
+      } else {
+            echo "Failure: Found ${total_vulnerabilities} vulnerabilities."
+            env.CURL_STATUS = 'false'
+            error("Vulnerabilities found, terminating pipeline.")
+      }
+      }
+      }
+      }
 
         stage('Build') {
             steps {
@@ -30,7 +96,7 @@ pipeline {
             steps {
                 script {
                     withCredentials([usernamePassword(credentialsId: 'dockerhub_credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
-                        sh "echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_USERNAME} --password-stdin"
+                        sh 'echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_USERNAME} --password-stdin'
                         def imageName = "ratneshpuskar/helloservice-jenkins:${env.BUILD_NUMBER}"
                         sh "docker push ${imageName}"
                     }
@@ -81,8 +147,8 @@ pipeline {
                       type: NodePort
                     """
 
-                    sh "echo \"${deploymentYaml}\" > deployment.yaml"
-                    sh "echo \"${serviceYaml}\" > service.yaml"
+                    sh """echo "${deploymentYaml}" > deployment.yaml"""
+                    sh """echo "${serviceYaml}" > service.yaml"""
 
                     sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@65.0.81.97 "kubectl apply -f -" < deployment.yaml'
                     sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@65.0.81.97 "kubectl apply -f -" < service.yaml'
