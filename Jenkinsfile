@@ -34,7 +34,7 @@ pipeline {
                     echo "Curl response: ${response}"
 
                     // Escape the response using the same sed approach from GitHub Actions
-                    def escapedResponse = sh(script: "echo '${response}' | sed 's/\"/\\"/g'", returnStdout: true).trim()
+                    def escapedResponse = sh(script: "echo '${response}' | sed 's/\"/\\\\\"/g'", returnStdout: true).trim()
 
                     // Construct JSON data properly
                     def jsonData = "{\"response\": \"${escapedResponse}\"}"
