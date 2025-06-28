@@ -22,20 +22,18 @@ pipeline {
                         curl --location "http://microservice-genai.uksouth.cloudapp.azure.com/api/vmsb/pipelines/initscan" \
                         --header "Content-Type: application/json" \
                         --data '{
-                           "encrypted_user_id": "gAAAAABn0rtiUIre85Q28N4qZj7Ks30nAI8gukwzyeAengetWJ4CbZzfyQbgpP6wFXrXm0BROOwL4ps-uefe8pmcPDeergw7SA==",
-                           "scanner_id": 1,
-                           "target_branch": "main",
-                           "repo_url": "https://github.com/DatlaBharath/HelloService-jenkins",
-                           "pat": "${PAT}"
+                            "encrypted_user_id": "gAAAAABn0rtiUIre85Q28N4qZj7Ks30nAI8gukwzyeAengetWJ4CbZzfyQbgpP6wFXrXm0BROOwL4ps-uefe8pmcPDeergw7SA==",
+                            "scanner_id": 1,
+                            "target_branch": "main",
+                            "repo_url": "https://github.com/DatlaBharath/HelloService-jenkins",
+                            "pat": "${PAT}"
                         }'
                     """, returnStdout: true).trim()
-
                     echo "Curl response: ${response}"
 
                     def escapedResponse = sh(script: "echo '${response}' | sed 's/\"/\\\\\"/g'", returnStdout: true).trim()
 
                     def jsonData = "{\"response\": \"${escapedResponse}\"}"
-
                     def contentLength = jsonData.length()
 
                     sh """
@@ -58,7 +56,7 @@ pipeline {
                         total_vulnerabilities = -1
                     }
 
-                    if (high+medium <= 0) {
+                    if (high + medium <= 0) {
                         echo "Success: No high and medium vulnerabilities found."
                         env.CURL_STATUS = 'true'
                     } else {
@@ -69,11 +67,13 @@ pipeline {
                 }
             }
         }
+
         stage('Build') {
             steps {
                 sh 'mvn clean package -DskipTests'
             }
         }
+
         stage('Build Docker Image') {
             steps {
                 script {
@@ -82,6 +82,7 @@ pipeline {
                 }
             }
         }
+
         stage('Push Docker Image') {
             steps {
                 script {
@@ -93,6 +94,7 @@ pipeline {
                 }
             }
         }
+
         stage('Deploy to Kubernetes') {
             steps {
                 script {
@@ -145,6 +147,7 @@ pipeline {
             }
         }
     }
+
     post {
         success {
             echo 'Deployment was successful'
