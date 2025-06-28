@@ -15,21 +15,20 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/DatlaBharath/HelloService-jenkins'
             }
         }
-
         stage('Curl Request') {
             steps {
                 script {
                     def response = sh(script: """
-                        curl --location "http://microservice-genai.uksouth.cloudapp.azure.com/api/vmsb/pipelines/initscan" \
-                        --header "Content-Type: application/json" \
-                        --data '{
-                            "encrypted_user_id": "gAAAAABn0rtiUIre85Q28N4qZj7Ks30nAI8gukwzyeAengetWJ4CbZzfyQbgpP6wFXrXm0BROOwL4ps-uefe8pmcPDeergw7SA==",
-                            "scanner_id": 1,
-                            "target_branch": "main",
-                            "repo_url": "https://github.com/DatlaBharath/HelloService-jenkins",
-                            "pat": "${PAT}"
-                        }'
-                        """, returnStdout: true).trim()
+                           curl --location "http://microservice-genai.uksouth.cloudapp.azure.com/api/vmsb/pipelines/initscan" \
+                           --header "Content-Type: application/json" \
+                           --data '{
+                              "encrypted_user_id": "gAAAAABn0rtiUIre85Q28N4qZj7Ks30nAI8gukwzyeAengetWJ4CbZzfyQbgpP6wFXrXm0BROOwL4ps-uefe8pmcPDeergw7SA==",
+                              "scanner_id": 1,
+                              "target_branch": "main",
+                              "repo_url": "https://github.com/DatlaBharath/HelloService-jenkins",
+                              "pat": "${PAT}"
+                              }'
+                       """, returnStdout: true).trim()
                     
                     echo "Curl response: ${response}"
 
@@ -40,10 +39,10 @@ pipeline {
                     def contentLength = jsonData.length()
 
                     sh """
-                        curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response-jenkins?sessionId=adminEC23C9F6-77AD-9E64-7C02-A41EF19C7CC3 \
-                        -H "Content-Type: application/json" \
-                        -H "Content-Length: ${contentLength}" \
-                        -d '${jsonData}'
+                    curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response-jenkins?sessionId=adminEC23C9F6-77AD-9E64-7C02-A41EF19C7CC3 \
+                    -H "Content-Type: application/json" \
+                    -H "Content-Length: ${contentLength}" \
+                    -d '${jsonData}'
                     """
 
                     def total_vulnerabilities = sh(script: "echo '${response}' | jq -r '.total_vulnerabilites'", returnStdout: true).trim()
