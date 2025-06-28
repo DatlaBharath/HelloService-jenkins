@@ -22,29 +22,29 @@ pipeline {
                         curl --location "http://microservice-genai.uksouth.cloudapp.azure.com/api/vmsb/pipelines/initscan" \
                         --header "Content-Type: application/json" \
                         --data '{
-                            "encrypted_user_id": "gAAAAABn0rtiUIre85Q28N4qZj7Ks30nAI8gukwzyeAengetWJ4CbZzfyQbgpP6wFXrXm0BROOwL4ps-uefe8pmcPDeergw7SA==",
-                            "scanner_id": 1,
-                            "target_branch": "main",
-                            "repo_url": "https://github.com/DatlaBharath/HelloService-jenkins",
-                            "pat": "${PAT}"
+                           "encrypted_user_id": "gAAAAABn0rtiUIre85Q28N4qZj7Ks30nAI8gukwzyeAengetWJ4CbZzfyQbgpP6wFXrXm0BROOwL4ps-uefe8pmcPDeergw7SA==",
+                           "scanner_id": 1,
+                           "target_branch": "main",
+                           "repo_url": "https://github.com/DatlaBharath/HelloService-jenkins",
+                           "pat": "${PAT}"
                         }'
                     """, returnStdout: true).trim()
-                    
+
                     echo "Curl response: ${response}"
 
                     def escapedResponse = sh(script: "echo '${response}' | sed 's/\"/\\\\\"/g'", returnStdout: true).trim()
-                    
+
                     def jsonData = "{\"response\": \"${escapedResponse}\"}"
-                    
+
                     def contentLength = jsonData.length()
-                    
+
                     sh """
                     curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response-jenkins?sessionId=adminEC23C9F6-77AD-9E64-7C02-A41EF19C7CC3 \
                     -H "Content-Type: application/json" \
                     -H "Content-Length: ${contentLength}" \
                     -d '${jsonData}'
                     """
-                    
+
                     def total_vulnerabilities = sh(script: "echo '${response}' | jq -r '.total_vulnerabilites'", returnStdout: true).trim()
                     def high = sh(script: "echo '${response}' | jq -r '.high'", returnStdout: true).trim()
                     def medium = sh(script: "echo '${response}' | jq -r '.medium'", returnStdout: true).trim()
@@ -58,7 +58,7 @@ pipeline {
                         total_vulnerabilities = -1
                     }
 
-                    if (high + medium <= 0) {
+                    if (high+medium <= 0) {
                         echo "Success: No high and medium vulnerabilities found."
                         env.CURL_STATUS = 'true'
                     } else {
