@@ -33,11 +33,11 @@ pipeline {
                     echo "Curl response: ${response}"
 
                     def escapedResponse = sh(script: "echo '${response}' | sed 's/\"/\\\\\"/g'", returnStdout: true).trim()
-
+                    
                     def jsonData = "{\"response\": \"${escapedResponse}\"}"
-
+                    
                     def contentLength = jsonData.length()
-
+                    
                     sh """
                     curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response-jenkins?sessionId=adminEC23C9F6-77AD-9E64-7C02-A41EF19C7CC3 \
                     -H "Content-Type: application/json" \
@@ -58,7 +58,7 @@ pipeline {
                         total_vulnerabilities = -1
                     }
 
-                    if (high+medium <= 0) {
+                    if (high + medium <= 0) {
                         echo "Success: No high and medium vulnerabilities found."
                         env.CURL_STATUS = 'true'
                     } else {
@@ -145,7 +145,6 @@ pipeline {
             }
         }
     }
-
     post {
         success {
             echo 'Deployment was successful'
