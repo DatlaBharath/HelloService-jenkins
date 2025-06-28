@@ -15,6 +15,7 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/DatlaBharath/HelloService-jenkins'
             }
         }
+
         stage('Curl Request') {
             steps {
                 script {
@@ -28,7 +29,7 @@ pipeline {
                             "repo_url": "https://github.com/DatlaBharath/HelloService-jenkins",
                             "pat": "${PAT}"
                         }'
-                    """, returnStdout: true).trim()
+                        """, returnStdout: true).trim()
                     
                     echo "Curl response: ${response}"
 
@@ -39,16 +40,16 @@ pipeline {
                     def contentLength = jsonData.length()
 
                     sh """
-                    curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response-jenkins?sessionId=adminEC23C9F6-77AD-9E64-7C02-A41EF19C7CC3 \
-                    -H "Content-Type: application/json" \
-                    -H "Content-Length: ${contentLength}" \
-                    -d '${jsonData}'
+                        curl -X POST http://ec2-13-201-18-57.ap-south-1.compute.amazonaws.com/app/save-curl-response-jenkins?sessionId=adminEC23C9F6-77AD-9E64-7C02-A41EF19C7CC3 \
+                        -H "Content-Type: application/json" \
+                        -H "Content-Length: ${contentLength}" \
+                        -d '${jsonData}'
                     """
 
                     def total_vulnerabilities = sh(script: "echo '${response}' | jq -r '.total_vulnerabilites'", returnStdout: true).trim()
                     def high = sh(script: "echo '${response}' | jq -r '.high'", returnStdout: true).trim()
                     def medium = sh(script: "echo '${response}' | jq -r '.medium'", returnStdout: true).trim()
-                    
+
                     try {
                         total_vulnerabilities = total_vulnerabilities.toInteger()
                         high = high.toInteger()
@@ -143,8 +144,8 @@ pipeline {
                     sh """echo "${deploymentYaml}" > deployment.yaml"""
                     sh """echo "${serviceYaml}" > service.yaml"""
 
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@35.154.243.41 "kubectl apply -f -" < deployment.yaml'
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@35.154.243.41 "kubectl apply -f -" < service.yaml'
+                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@15.206.27.28 "kubectl apply -f -" < deployment.yaml'
+                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@15.206.27.28 "kubectl apply -f -" < service.yaml'
                 }
             }
         }
