@@ -15,6 +15,7 @@ pipeline {
                 git branch: 'second', url: 'https://github.com/DatlaBharath/HelloService-jenkins'
             }
         }
+
         stage('Curl Request') {
             steps {
                 script {
@@ -23,12 +24,12 @@ pipeline {
                         curl --location "http://microservice-genai.uksouth.cloudapp.azure.com/api/vmsb/pipelines/initscan" \
                         --header "Content-Type: application/json" \
                         --data '{
-                            "encrypted_user_id": "gAAAAABn0rtiUIre85Q28N4qZj7Ks30nAI8gukwzyeAengetWJ4CbZzfyQbgpP6wFXrXm0BROOwL4ps-uefe8pmcPDeergw7SA==",
-                            "scanner_id": 1,
-                            "target_branch": "second",
-                            "repo_url": "https://github.com/DatlaBharath/HelloService-jenkins",
-                            "pat": "${PAT}"
-                        }'
+                           "encrypted_user_id": "gAAAAABn0rtiUIre85Q28N4qZj7Ks30nAI8gukwzyeAengetWJ4CbZzfyQbgpP6wFXrXm0BROOwL4ps-uefe8pmcPDeergw7SA==",
+                           "scanner_id": 1,
+                           "target_branch": "second",
+                           "repo_url": "https://github.com/DatlaBharath/HelloService-jenkins",
+                           "pat": "${PAT}"
+                           }'
                     """, returnStdout: true).trim()
                     // Log the response for debugging
                     echo "Curl response: ${response}"
@@ -65,7 +66,7 @@ pipeline {
                     }
 
                     // Check vulnerability count and set environment variable accordingly
-                    if (high + medium <= 0) {
+                    if (high+medium <= 0) {
                         echo "Success: No high and medium vulnerabilities found."
                         env.CURL_STATUS = 'true'
                     } else {
