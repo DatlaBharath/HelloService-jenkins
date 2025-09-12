@@ -1,102 +1,60 @@
 pipeline {
     agent any
-    tools {
-        maven 'Maven'
+
+    environment {
+        dockerImage = ''
+        registryCredential = 'dockerhub-credentials'
+        registry = 'yourDockerRegistry'
+        kubernetesHost = 'user@kubernetesHost'
+        deploymentName = 'app-deployment'
+        containerName = 'app-container'
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/DatlaBharath/HelloService-jenkins'
+                git branch: 'main', url: 'https://github.com/user/repository.git'
             }
         }
-
+        
         stage('Build') {
             steps {
-                sh 'mvn clean package -DskipTests'
-            }
-        }
-
-        stage('Build Docker Image') {
-            steps {
                 script {
-                    def imageName = "sakthisiddu1/helloservice-jenkins:${env.BUILD_NUMBER}"
-                    sh "docker build -t ${imageName} ."
+                    sh 'mvn clean package'
                 }
             }
         }
-
-        stage('Push Docker Image') {
+        
+        stage('Docker: Build Image') {
             steps {
                 script {
-                    withCredentials([usernamePassword(credentialsId: 'dockerhub_credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
-                        sh 'echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_USERNAME} --password-stdin'
-                        def imageName = "sakthisiddu1/helloservice-jenkins:${env.BUILD_NUMBER}"
-                        sh "docker push ${imageName}"
+                    dockerImage = docker.build("${registry}:${env.BUILD_ID}")
+                }
+            }
+        }
+        
+        stage('Docker: Push Image') {
+            steps {
+                script {
+                    docker.withRegistry("https://${registry}", 'dockerhub-credentials') {
+                        dockerImage.push()
                     }
                 }
             }
         }
-
+        
         stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    def deploymentYaml = """
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: helloservice-jenkins-deployment
-  labels:
-    app: helloservice-jenkins
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: helloservice-jenkins
-  template:
-    metadata:
-      labels:
-        app: helloservice-jenkins
-    spec:
-      containers:
-      - name: helloservice-jenkins
-        image: sakthisiddu1/helloservice-jenkins:${env.BUILD_NUMBER}
-        ports:
-        - containerPort: 5000
-"""
-
-                    def serviceYaml = """
-apiVersion: v1
-kind: Service
-metadata:
-  name: helloservice-jenkins-service
-spec:
-  selector:
-    app: helloservice-jenkins
-  ports:
-  - protocol: TCP
-    port: 5000
-    targetPort: 5000
-    nodePort: 30007
-  type: NodePort
-"""
-
-                    sh """echo "$deploymentYaml" > deployment.yaml"""
-                    sh """echo "$serviceYaml" > service.yaml"""
-
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@15.206.73.231 "kubectl apply -f -" < deployment.yaml'
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@15.206.73.231 "kubectl apply -f -" < service.yaml'
+                    withCredentials([usernamePassword(credentialsId: 'ssh-credentials', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                        sh """
+                            sshpass -p "$PASS" ssh -o StrictHostKeyChecking=no $USER@$kubernetesHost << EOF
+                            kubectl set image deployment/${deploymentName} ${containerName}=${registry}:${env.BUILD_ID}
+                            EOF
+                        """
+                    }
                 }
             }
-        }
-    }
-
-    post {
-        success {
-            echo 'Deployment was successful'
-        }
-        failure {
-            echo 'Deployment failed'
         }
     }
 }
