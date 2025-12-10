@@ -1,0 +1,4 @@
+apiVersion: v2
+name: helloservice
+version: 0.1.0
+description: A simple Helm chart for HelloService
