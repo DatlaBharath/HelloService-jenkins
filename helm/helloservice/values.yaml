@@ -1,7 +1,7 @@
 replicaCount: 2
 
 image:
-  repository: sakthisiddu1/helloservice
+  repository: sakthisiddu1/helloservice-jenkins
   tag: "1"
 
 service:
