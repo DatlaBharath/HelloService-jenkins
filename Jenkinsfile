@@ -7,9 +7,7 @@ pipeline {
 
     stages {
 
-        /* ----------------------------------------------------
-         * 1. CHECKOUT
-         * ---------------------------------------------------- */
+        /* -------------------- CHECKOUT -------------------- */
         stage('Checkout') {
             steps {
                 git branch: 'main',
@@ -17,32 +15,48 @@ pipeline {
             }
         }
 
-        /* ----------------------------------------------------
-         * 2. SETUP KUBERNETES ENVIRONMENT (FIXED)
-         * ---------------------------------------------------- */
+        /* -------- SETUP KUBERNETES ENVIRONMENT (FIXED) ----- */
         stage('Setup Kubernetes Environment') {
             steps {
                 sh '''
                 ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@65.2.124.195 << 'EOF'
-
                 set -e
 
-                echo "===== Updating system ====="
+                echo "===== Update OS ====="
                 sudo apt-get update -y
 
-                echo "===== Install Docker ====="
+                echo "===== Install Docker (Ubuntu 24.04 safe) ====="
                 if ! command -v docker >/dev/null 2>&1; then
-                    sudo apt-get install -y docker.io
-                    sudo systemctl start docker
+                    sudo apt-get remove -y docker docker-engine docker.io containerd runc || true
+
+                    sudo apt-get install -y \
+                        ca-certificates \
+                        curl \
+                        gnupg \
+                        lsb-release
+
+                    sudo mkdir -p /etc/apt/keyrings
+                    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
+                        sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+                    echo \
+                      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+                      https://download.docker.com/linux/ubuntu \
+                      $(lsb_release -cs) stable" | \
+                      sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+                    sudo apt-get update -y
+                    sudo apt-get install -y docker-ce docker-ce-cli containerd.io
                     sudo systemctl enable docker
+                    sudo systemctl start docker
                     sudo usermod -aG docker ubuntu
                 fi
 
                 echo "===== Install Redis ====="
                 if ! command -v redis-server >/dev/null 2>&1; then
                     sudo apt-get install -y redis-server
-                    sudo systemctl start redis-server
                     sudo systemctl enable redis-server
+                    sudo systemctl start redis-server
                 fi
 
                 echo "===== Install Azure CLI ====="
@@ -78,18 +92,14 @@ pipeline {
             }
         }
 
-        /* ----------------------------------------------------
-         * 3. BUILD APPLICATION
-         * ---------------------------------------------------- */
+        /* -------------------- BUILD -------------------- */
         stage('Build') {
             steps {
                 sh 'mvn clean package -DskipTests'
             }
         }
 
-        /* ----------------------------------------------------
-         * 4. BUILD DOCKER IMAGE
-         * ---------------------------------------------------- */
+        /* ---------------- DOCKER BUILD ---------------- */
         stage('Build Docker Image') {
             steps {
                 script {
@@ -99,9 +109,7 @@ pipeline {
             }
         }
 
-        /* ----------------------------------------------------
-         * 5. PUSH DOCKER IMAGE
-         * ---------------------------------------------------- */
+        /* ---------------- PUSH IMAGE ------------------ */
         stage('Push Docker Image') {
             steps {
                 script {
@@ -120,9 +128,7 @@ pipeline {
             }
         }
 
-        /* ----------------------------------------------------
-         * 6. DEPLOY TO KUBERNETES
-         * ---------------------------------------------------- */
+        /* --------------- K8s DEPLOY ------------------- */
         stage('Deploy to Kubernetes') {
             steps {
                 script {
