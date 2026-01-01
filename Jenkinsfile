@@ -19,83 +19,82 @@ pipeline {
         stage('Setup Kubernetes Environment') {
             steps {
                 sh '''
-                ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@65.2.124.195 << 'EOF'
-                set -e
+ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@65.2.124.195 << 'EOF'
+set -e
 
-                echo "===== Waiting for apt locks ====="
-                while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
-                    echo "Waiting for apt lock..."
-                    sleep 5
-                done
+echo "===== Waiting for apt locks ====="
+while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+    echo "Waiting for apt lock..."
+    sleep 5
+done
 
-                sudo systemctl stop unattended-upgrades || true
+sudo systemctl stop unattended-upgrades || true
 
-                echo "===== Update OS ====="
-                sudo apt-get update -y
+echo "===== Update OS ====="
+sudo apt-get update -y
 
-                echo "===== Install prerequisites ====="
-                sudo apt-get install -y ca-certificates curl gnupg lsb-release
+echo "===== Install prerequisites ====="
+sudo apt-get install -y ca-certificates curl gnupg lsb-release
 
-                echo "===== Install Docker (safe & idempotent) ====="
-                if ! command -v docker >/dev/null 2>&1; then
-                    sudo apt-get remove -y docker docker-engine docker.io containerd runc || true
+echo "===== Install Docker (safe & idempotent) ====="
+if ! command -v docker >/dev/null 2>&1; then
+    sudo apt-get remove -y docker docker-engine docker.io containerd runc || true
 
-                    if [ ! -f /etc/apt/keyrings/docker.gpg ]; then
-                        sudo mkdir -p /etc/apt/keyrings
-                        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
-                            sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-                    fi
+    if [ ! -f /etc/apt/keyrings/docker.gpg ]; then
+        sudo mkdir -p /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
+            sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    fi
 
-                    if [ ! -f /etc/apt/sources.list.d/docker.list ]; then
-                        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
-                        https://download.docker.com/linux/ubuntu \
-                        $(lsb_release -cs) stable" | \
-                        sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-                    fi
+    if [ ! -f /etc/apt/sources.list.d/docker.list ]; then
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+        https://download.docker.com/linux/ubuntu \
+        $(lsb_release -cs) stable" | \
+        sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    fi
 
-                    sudo apt-get update -y
-                    sudo apt-get install -y docker-ce docker-ce-cli containerd.io
-                    sudo systemctl enable docker
-                    sudo systemctl start docker
-                    sudo usermod -aG docker ubuntu
-                fi
+    sudo apt-get update -y
+    sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+    sudo systemctl enable docker
+    sudo systemctl start docker
+    sudo usermod -aG docker ubuntu
+fi
 
-                echo "===== Install Redis ====="
-                if ! command -v redis-server >/dev/null 2>&1; then
-                    sudo apt-get install -y redis-server
-                    sudo systemctl enable redis-server
-                    sudo systemctl start redis-server
-                fi
+echo "===== Install Redis ====="
+if ! command -v redis-server >/dev/null 2>&1; then
+    sudo apt-get install -y redis-server
+    sudo systemctl enable redis-server
+    sudo systemctl start redis-server
+fi
 
-                echo "===== Install Azure CLI ====="
-                if ! command -v az >/dev/null 2>&1; then
-                    curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-                fi
+echo "===== Install Azure CLI ====="
+if ! command -v az >/dev/null 2>&1; then
+    curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+fi
 
-                echo "===== Install kubectl ====="
-                if ! command -v kubectl >/dev/null 2>&1; then
-                    curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
-                    chmod +x kubectl
-                    sudo mv kubectl /usr/local/bin/
-                fi
+echo "===== Install kubectl ====="
+if ! command -v kubectl >/dev/null 2>&1; then
+    curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+    chmod +x kubectl
+    sudo mv kubectl /usr/local/bin/
+fi
 
-                echo "===== Install Minikube ====="
-                if ! command -v minikube >/dev/null 2>&1; then
-                    curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-                    chmod +x minikube-linux-amd64
-                    sudo mv minikube-linux-amd64 /usr/local/bin/minikube
-                fi
+echo "===== Install Minikube ====="
+if ! command -v minikube >/dev/null 2>&1; then
+    curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+    chmod +x minikube-linux-amd64
+    sudo mv minikube-linux-amd64 /usr/local/bin/minikube
+fi
 
-                echo "===== Start Minikube ====="
-                minikube start --driver=docker || minikube start
+echo "===== Start Minikube ====="
+minikube start --driver=docker || minikube start
 
-                echo "===== Verify Setup ====="
-                docker --version
-                redis-cli ping
-                kubectl version --client
-                minikube status
-
-                EOF
+echo "===== Verify Setup ====="
+docker --version
+redis-cli ping
+kubectl version --client
+minikube status
+EOF
                 '''
             }
         }
@@ -141,7 +140,7 @@ pipeline {
             steps {
                 script {
                     sh '''
-                    cat <<EOF > deployment.yaml
+cat <<EOF > deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -165,7 +164,7 @@ EOF
                     '''
 
                     sh '''
-                    cat <<EOF > service.yaml
+cat <<EOF > service.yaml
 apiVersion: v1
 kind: Service
 metadata:
