@@ -8,7 +8,7 @@ pipeline {
     stages {
 
         /* ----------------------------------------------------
-         * 1. CHECKOUT SOURCE CODE
+         * 1. CHECKOUT
          * ---------------------------------------------------- */
         stage('Checkout') {
             steps {
@@ -18,70 +18,68 @@ pipeline {
         }
 
         /* ----------------------------------------------------
-         * 2. SETUP KUBERNETES ENVIRONMENT (NEW STAGE)
+         * 2. SETUP KUBERNETES ENVIRONMENT (FIXED)
          * ---------------------------------------------------- */
         stage('Setup Kubernetes Environment') {
             steps {
-                script {
-                    sh """
-                    ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@65.2.124.195 << 'EOF'
+                sh '''
+                ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@65.2.124.195 << 'EOF'
 
-                    set -e
+                set -e
 
-                    echo "===== Updating system ====="
-                    sudo apt-get update -y
+                echo "===== Updating system ====="
+                sudo apt-get update -y
 
-                    echo "===== Install Docker ====="
-                    if ! command -v docker >/dev/null 2>&1; then
-                        sudo apt-get install -y docker.io
-                        sudo systemctl start docker
-                        sudo systemctl enable docker
-                        sudo usermod -aG docker ubuntu
-                    fi
+                echo "===== Install Docker ====="
+                if ! command -v docker >/dev/null 2>&1; then
+                    sudo apt-get install -y docker.io
+                    sudo systemctl start docker
+                    sudo systemctl enable docker
+                    sudo usermod -aG docker ubuntu
+                fi
 
-                    echo "===== Install Redis 6 ====="
-                    if ! command -v redis-server >/dev/null 2>&1; then
-                        sudo apt-get install -y redis-server
-                        sudo systemctl start redis-server
-                        sudo systemctl enable redis-server
-                    fi
+                echo "===== Install Redis ====="
+                if ! command -v redis-server >/dev/null 2>&1; then
+                    sudo apt-get install -y redis-server
+                    sudo systemctl start redis-server
+                    sudo systemctl enable redis-server
+                fi
 
-                    echo "===== Install Azure CLI ====="
-                    if ! command -v az >/dev/null 2>&1; then
-                        curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-                    fi
+                echo "===== Install Azure CLI ====="
+                if ! command -v az >/dev/null 2>&1; then
+                    curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+                fi
 
-                    echo "===== Install kubectl ====="
-                    if ! command -v kubectl >/dev/null 2>&1; then
-                        curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
-                        chmod +x kubectl
-                        sudo mv kubectl /usr/local/bin/
-                    fi
+                echo "===== Install kubectl ====="
+                if ! command -v kubectl >/dev/null 2>&1; then
+                    curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+                    chmod +x kubectl
+                    sudo mv kubectl /usr/local/bin/
+                fi
 
-                    echo "===== Install Minikube ====="
-                    if ! command -v minikube >/dev/null 2>&1; then
-                        curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-                        chmod +x minikube-linux-amd64
-                        sudo mv minikube-linux-amd64 /usr/local/bin/minikube
-                    fi
+                echo "===== Install Minikube ====="
+                if ! command -v minikube >/dev/null 2>&1; then
+                    curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+                    chmod +x minikube-linux-amd64
+                    sudo mv minikube-linux-amd64 /usr/local/bin/minikube
+                fi
 
-                    echo "===== Start Minikube ====="
-                    minikube start --driver=docker || minikube start
+                echo "===== Start Minikube ====="
+                minikube start --driver=docker || minikube start
 
-                    echo "===== Verify Setup ====="
-                    docker --version
-                    redis-cli ping
-                    kubectl version --client
-                    minikube status
+                echo "===== Verify Setup ====="
+                docker --version
+                redis-cli ping
+                kubectl version --client
+                minikube status
 
-                    EOF
-                    """
-                }
+                EOF
+                '''
             }
         }
 
         /* ----------------------------------------------------
-         * 3. BUILD MAVEN APPLICATION
+         * 3. BUILD APPLICATION
          * ---------------------------------------------------- */
         stage('Build') {
             steps {
@@ -123,12 +121,13 @@ pipeline {
         }
 
         /* ----------------------------------------------------
-         * 6. DEPLOY TO KUBERNETES (MINIKUBE)
+         * 6. DEPLOY TO KUBERNETES
          * ---------------------------------------------------- */
         stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    def deploymentYaml = """
+                    sh '''
+                    cat <<EOF > deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -145,12 +144,14 @@ spec:
     spec:
       containers:
       - name: helloservice-jenkins
-        image: sakthisiddu1/helloservice-jenkins:${env.BUILD_NUMBER}
+        image: sakthisiddu1/helloservice-jenkins:${BUILD_NUMBER}
         ports:
         - containerPort: 5000
-"""
+EOF
+                    '''
 
-                    def serviceYaml = """
+                    sh '''
+                    cat <<EOF > service.yaml
 apiVersion: v1
 kind: Service
 metadata:
@@ -163,10 +164,8 @@ spec:
   - port: 5000
     targetPort: 5000
     nodePort: 30007
-"""
-
-                    sh 'echo "${deploymentYaml}" > deployment.yaml'
-                    sh 'echo "${serviceYaml}" > service.yaml'
+EOF
+                    '''
 
                     sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@65.2.124.195 "kubectl apply -f -" < deployment.yaml'
                     sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@65.2.124.195 "kubectl apply -f -" < service.yaml'
@@ -177,10 +176,10 @@ spec:
 
     post {
         success {
-            echo 'Deployment was successful'
+            echo '✅ Deployment was successful'
         }
         failure {
-            echo 'Deployment failed'
+            echo '❌ Deployment failed'
         }
     }
 }
