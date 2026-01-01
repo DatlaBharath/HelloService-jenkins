@@ -15,35 +15,43 @@ pipeline {
             }
         }
 
-        /* -------- SETUP KUBERNETES ENVIRONMENT (FIXED) ----- */
+        /* -------- SETUP KUBERNETES ENVIRONMENT (HARDENED) ----- */
         stage('Setup Kubernetes Environment') {
             steps {
                 sh '''
                 ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@65.2.124.195 << 'EOF'
                 set -e
 
+                echo "===== Waiting for apt locks ====="
+                while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+                    echo "Waiting for apt lock..."
+                    sleep 5
+                done
+
+                sudo systemctl stop unattended-upgrades || true
+
                 echo "===== Update OS ====="
                 sudo apt-get update -y
 
-                echo "===== Install Docker (Ubuntu 24.04 safe) ====="
+                echo "===== Install prerequisites ====="
+                sudo apt-get install -y ca-certificates curl gnupg lsb-release
+
+                echo "===== Install Docker (safe & idempotent) ====="
                 if ! command -v docker >/dev/null 2>&1; then
                     sudo apt-get remove -y docker docker-engine docker.io containerd runc || true
 
-                    sudo apt-get install -y \
-                        ca-certificates \
-                        curl \
-                        gnupg \
-                        lsb-release
+                    if [ ! -f /etc/apt/keyrings/docker.gpg ]; then
+                        sudo mkdir -p /etc/apt/keyrings
+                        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
+                            sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+                    fi
 
-                    sudo mkdir -p /etc/apt/keyrings
-                    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
-                        sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-
-                    echo \
-                      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
-                      https://download.docker.com/linux/ubuntu \
-                      $(lsb_release -cs) stable" | \
-                      sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+                    if [ ! -f /etc/apt/sources.list.d/docker.list ]; then
+                        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+                        https://download.docker.com/linux/ubuntu \
+                        $(lsb_release -cs) stable" | \
+                        sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+                    fi
 
                     sudo apt-get update -y
                     sudo apt-get install -y docker-ce docker-ce-cli containerd.io
