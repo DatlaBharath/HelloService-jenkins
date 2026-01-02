@@ -276,8 +276,8 @@ environment   = "jenkins-${BUILD_NUMBER}"
                 script {
                     echo "===== Installing Dependencies on EC2: ${EC2_PUBLIC_IP} ====="
                     
-                    sh """
-ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ubuntu@${EC2_PUBLIC_IP} << 'EOF'
+                    // Using sh with single quotes and a separate file to avoid escaping issues
+                    def setupScript = '''#!/bin/bash
 set -e
 
 echo "===== Waiting for apt locks ====="
@@ -305,9 +305,9 @@ if ! command -v docker >/dev/null 2>&1; then
     fi
 
     if [ ! -f /etc/apt/sources.list.d/docker.list ]; then
-        echo "deb [arch=\\$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \\
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \\
         https://download.docker.com/linux/ubuntu \\
-        \\$(lsb_release -cs) stable" | \\
+        $(lsb_release -cs) stable" | \\
         sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
     fi
 
@@ -352,7 +352,7 @@ fi
 
 echo "===== Install kubectl ====="
 if ! command -v kubectl >/dev/null 2>&1; then
-    curl -LO https://storage.googleapis.com/kubernetes-release/release/\\$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+    curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
     chmod +x kubectl
     sudo mv kubectl /usr/local/bin/
 fi
@@ -412,22 +412,22 @@ kubectl create namespace unified-ns --dry-run=client -o yaml | kubectl apply -f 
 echo "===== Set default namespace in kubeconfig ====="
 # Set namespace for ubuntu user
 kubectl config set-context --current --namespace=unified-ns
-CURRENT_CONTEXT=\\$(kubectl config current-context)
-kubectl config set-context \\$CURRENT_CONTEXT --namespace=unified-ns
+CURRENT_CONTEXT=$(kubectl config current-context)
+kubectl config set-context $CURRENT_CONTEXT --namespace=unified-ns
 
 # Set namespace for root user
 sudo kubectl config set-context --current --namespace=unified-ns
-sudo kubectl config set-context \\$CURRENT_CONTEXT --namespace=unified-ns
+sudo kubectl config set-context $CURRENT_CONTEXT --namespace=unified-ns
 
 # Verify and update kubeconfig if needed
 if ! grep -q "namespace: unified-ns" /home/ubuntu/.kube/config; then
     echo "Updating ubuntu kubeconfig to add namespace..."
-    kubectl config set-context \\$CURRENT_CONTEXT --namespace=unified-ns
+    kubectl config set-context $CURRENT_CONTEXT --namespace=unified-ns
 fi
 
 if ! sudo grep -q "namespace: unified-ns" /root/.kube/config; then
     echo "Updating root kubeconfig to add namespace..."
-    sudo kubectl config set-context \\$CURRENT_CONTEXT --namespace=unified-ns
+    sudo kubectl config set-context $CURRENT_CONTEXT --namespace=unified-ns
 fi
 
 echo "===== Verify namespace configuration ====="
@@ -493,7 +493,14 @@ echo "Namespace: unified-ns"
 echo "Addons enabled: metrics-server, ingress"
 echo ""
 echo "✅ Kubernetes Environment Setup Complete!"
-EOF
+'''
+                    
+                    // Write script to file and execute via SSH
+                    writeFile file: "${WORKSPACE}/setup.sh", text: setupScript
+                    
+                    sh """
+                        scp -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${WORKSPACE}/setup.sh ubuntu@${EC2_PUBLIC_IP}:/tmp/setup.sh
+                        ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ubuntu@${EC2_PUBLIC_IP} 'chmod +x /tmp/setup.sh && /tmp/setup.sh'
                     """
                 }
             }
