@@ -112,17 +112,24 @@ sudo minikube addons enable metrics-server
 sudo minikube addons enable ingress
 
 echo "===== Configure kubectl for ubuntu user ====="
+# Wait for minikube to fully initialize
+sleep 5
+
 # Fix permissions on minikube certificates
-sudo chmod -R 755 /root/.minikube
-sudo chmod 644 /root/.minikube/ca.crt
-sudo chmod 644 /root/.minikube/profiles/minikube/client.crt
-sudo chmod 644 /root/.minikube/profiles/minikube/client.key
+if [ -d /root/.minikube ]; then
+    sudo chmod -R 755 /root/.minikube || true
+    sudo chmod 644 /root/.minikube/ca.crt 2>/dev/null || true
+    sudo chmod 644 /root/.minikube/profiles/minikube/client.crt 2>/dev/null || true
+    sudo chmod 644 /root/.minikube/profiles/minikube/client.key 2>/dev/null || true
+fi
 
 # Copy kubeconfig to ubuntu user
 mkdir -p /home/ubuntu/.kube
 sudo cp /root/.kube/config /home/ubuntu/.kube/config
 sudo chown -R ubuntu:ubuntu /home/ubuntu/.kube
-export KUBECONFIG=/home/ubuntu/.kube/config
+
+# Also fix permissions on copied config
+chmod 644 /home/ubuntu/.kube/config
 
 echo "===== Verify Setup ====="
 sudo docker --version
@@ -131,10 +138,16 @@ redis-cli ping
 kubectl version --client
 sudo minikube status
 
-echo "===== Create and configure namespace ====="
-kubectl create namespace unified-ns --dry-run=client -o yaml | kubectl apply -f -
-kubectl config set-context --current --namespace=unified-ns
-echo "Current namespace: $(kubectl config view --minify --output 'jsonpath={..namespace}')"
+echo "===== Create and configure namespace (using sudo kubectl) ====="
+# Use sudo for kubectl commands to avoid permission issues
+sudo kubectl create namespace unified-ns --dry-run=client -o yaml | sudo kubectl apply -f -
+sudo kubectl config set-context --current --namespace=unified-ns
+
+# Also update the ubuntu user's config
+export KUBECONFIG=/home/ubuntu/.kube/config
+sed -i 's/namespace:.*/namespace: unified-ns/' /home/ubuntu/.kube/config 2>/dev/null || echo "  namespace: unified-ns" >> /home/ubuntu/.kube/config
+
+echo "Current namespace: $(sudo kubectl config view --minify --output 'jsonpath={..namespace}')"
 
 echo "===== PostgreSQL Connection Info ====="
 echo "PostgreSQL is installed and running on localhost:5432"
