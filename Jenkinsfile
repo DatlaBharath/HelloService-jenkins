@@ -94,6 +94,10 @@ sudo minikube delete --all --purge || true
 echo "===== Start Minikube with sudo (workaround for docker group) ====="
 sudo minikube start --driver=docker --force
 
+echo "===== Enable Minikube addons ====="
+sudo minikube addons enable metrics-server
+sudo minikube addons enable ingress
+
 echo "===== Configure kubectl for ubuntu user ====="
 sudo chmod 644 /root/.kube/config || true
 mkdir -p /home/ubuntu/.kube
@@ -106,6 +110,11 @@ sudo docker --version
 redis-cli ping
 kubectl version --client
 sudo minikube status
+
+echo "===== Create and configure namespace ====="
+kubectl create namespace unified-ns --dry-run=client -o yaml | kubectl apply -f -
+kubectl config set-context --current --namespace=unified-ns
+echo "Current namespace: $(kubectl config view --minify --output 'jsonpath={..namespace}')"
 EOF
                 '''
             }
