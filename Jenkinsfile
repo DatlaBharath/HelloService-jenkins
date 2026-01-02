@@ -50,13 +50,6 @@ fi
 echo "===== Add user to docker group ====="
 sudo usermod -aG docker ubuntu
 
-echo "===== Waiting for Docker installation to complete ====="
-sleep 10
-while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
-    echo "Waiting for dpkg lock to be released..."
-    sleep 5
-done
-
 echo "===== Install PostgreSQL ====="
 if ! command -v psql >/dev/null 2>&1; then
     sudo apt-get install -y postgresql postgresql-contrib
@@ -108,46 +101,59 @@ echo "===== Start Minikube with sudo (workaround for docker group) ====="
 sudo minikube start --driver=docker --force
 
 echo "===== Enable Minikube addons ====="
-sudo minikube addons enable metrics-server
-sudo minikube addons enable ingress
+sudo minikube addons enable metrics-server || echo "⚠️  metrics-server addon failed"
+sudo minikube addons enable ingress || echo "⚠️  ingress addon failed"
+
+echo "===== Wait for addons to initialize ====="
+sleep 10
+
+echo "===== Verify enabled addons ====="
+sudo minikube addons list | grep -E "metrics-server|ingress"
 
 echo "===== Configure kubectl for ubuntu user ====="
-# Wait for minikube to fully initialize
-sleep 5
-
-# Fix permissions on minikube certificates
-if [ -d /root/.minikube ]; then
-    sudo chmod -R 755 /root/.minikube || true
-    sudo chmod 644 /root/.minikube/ca.crt 2>/dev/null || true
-    sudo chmod 644 /root/.minikube/profiles/minikube/client.crt 2>/dev/null || true
-    sudo chmod 644 /root/.minikube/profiles/minikube/client.key 2>/dev/null || true
-fi
-
-# Copy kubeconfig to ubuntu user
+sudo chmod 644 /root/.kube/config || true
 mkdir -p /home/ubuntu/.kube
-sudo cp /root/.kube/config /home/ubuntu/.kube/config
+sudo cp /root/.kube/config /home/ubuntu/.kube/config 2>/dev/null || sudo minikube kubectl -- config view --raw > /home/ubuntu/.kube/config
 sudo chown -R ubuntu:ubuntu /home/ubuntu/.kube
+export KUBECONFIG=/home/ubuntu/.kube/config
 
-# Also fix permissions on copied config
-chmod 644 /home/ubuntu/.kube/config
+echo "===== Create and configure namespace ====="
+kubectl create namespace unified-ns --dry-run=client -o yaml | kubectl apply -f -
+kubectl config set-context --current --namespace=unified-ns
+
+echo "===== Verify namespace configuration ====="
+echo "Current namespace: $(kubectl config view --minify --output 'jsonpath={..namespace}')"
+kubectl get namespace unified-ns
+
+echo "===== Wait for ingress controller to be ready ====="
+echo "Waiting for ingress-nginx controller..."
+kubectl wait --namespace ingress-nginx \
+  --for=condition=ready pod \
+  --selector=app.kubernetes.io/component=controller \
+  --timeout=120s || echo "⚠️  Ingress controller not ready yet (might need more time)"
+
+echo "===== Verify Kubernetes cluster ====="
+kubectl cluster-info
+kubectl get nodes
+kubectl get pods --all-namespaces
 
 echo "===== Verify Setup ====="
+echo ""
+echo "Docker Version:"
 sudo docker --version
+echo ""
+echo "PostgreSQL Version:"
 psql --version
+echo ""
+echo "Redis Status:"
 redis-cli ping
+echo ""
+echo "Kubectl Version:"
 kubectl version --client
+echo ""
+echo "Minikube Status:"
 sudo minikube status
-
-echo "===== Create and configure namespace (using sudo kubectl) ====="
-# Use sudo for kubectl commands to avoid permission issues
-sudo kubectl create namespace unified-ns --dry-run=client -o yaml | sudo kubectl apply -f -
-sudo kubectl config set-context --current --namespace=unified-ns
-
-# Also update the ubuntu user's config
-export KUBECONFIG=/home/ubuntu/.kube/config
-sed -i 's/namespace:.*/namespace: unified-ns/' /home/ubuntu/.kube/config 2>/dev/null || echo "  namespace: unified-ns" >> /home/ubuntu/.kube/config
-
-echo "Current namespace: $(sudo kubectl config view --minify --output 'jsonpath={..namespace}')"
+echo ""
 
 echo "===== PostgreSQL Connection Info ====="
 echo "PostgreSQL is installed and running on localhost:5432"
@@ -155,6 +161,10 @@ echo "Database: appdb"
 echo "User: appuser"
 echo "Password: apppassword"
 
+echo ""
+echo "===== Kubernetes Cluster Info ====="
+echo "Namespace: unified-ns"
+echo "Addons enabled: metrics-server, ingress"
 echo ""
 echo "✅ Kubernetes Environment Setup Complete!"
 EOF
