@@ -7,7 +7,7 @@ pipeline {
         stage('Setup Kubernetes Environment') {
             steps {
                 sh '''
-ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@3.110.184.89 << 'EOF'
+ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.233.55.209 << 'EOF'
 set -e
 
 echo "===== Waiting for apt locks ====="
@@ -49,6 +49,13 @@ fi
 
 echo "===== Add user to docker group ====="
 sudo usermod -aG docker ubuntu
+
+echo "===== Waiting for Docker installation to complete ====="
+sleep 10
+while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+    echo "Waiting for dpkg lock to be released..."
+    sleep 5
+done
 
 echo "===== Install PostgreSQL ====="
 if ! command -v psql >/dev/null 2>&1; then
