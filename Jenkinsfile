@@ -127,11 +127,14 @@ sed -i "s|/root/.minikube|/home/ubuntu/.minikube|g" /home/ubuntu/.kube/config
 sudo chown -R ubuntu:ubuntu /home/ubuntu/.kube
 export KUBECONFIG=/home/ubuntu/.kube/config
 
-echo "===== Configure kubectl for root user ====="
-# Ensure root also has proper kubeconfig with namespace
-sudo mkdir -p /root/.kube
-sudo minikube kubectl -- config view --raw | sudo tee /root/.kube/config > /dev/null
-sudo chmod 600 /root/.kube/config
+echo "===== Configure kubectl for root user (fix kubeconfig) ====="
+# Regenerate root's kubeconfig from minikube to ensure it's correct
+sudo minikube update-context
+sudo chmod 644 /root/.kube/config
+
+echo "===== Verify root kubectl access ====="
+sudo kubectl cluster-info
+sudo kubectl get nodes
 
 echo "===== Create and configure namespace ====="
 kubectl create namespace unified-ns --dry-run=client -o yaml | kubectl apply -f -
