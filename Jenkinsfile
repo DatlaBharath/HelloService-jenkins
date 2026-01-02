@@ -7,7 +7,7 @@ pipeline {
         stage('Setup Kubernetes Environment') {
             steps {
                 sh '''
-ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@65.2.141.34 << 'EOF'
+ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@15.207.107.7 << 'EOF'
 set -e
 
 echo "===== Waiting for apt locks ====="
@@ -127,34 +127,59 @@ sed -i "s|/root/.minikube|/home/ubuntu/.minikube|g" /home/ubuntu/.kube/config
 sudo chown -R ubuntu:ubuntu /home/ubuntu/.kube
 export KUBECONFIG=/home/ubuntu/.kube/config
 
+echo "===== Configure kubectl for root user (fix kubeconfig) ====="
+# Regenerate root's kubeconfig from minikube to ensure it's correct
+sudo minikube update-context
+sudo chmod 644 /root/.kube/config
+
+echo "===== Verify root kubectl access ====="
+sudo kubectl cluster-info
+sudo kubectl get nodes
+
 echo "===== Create and configure namespace ====="
 kubectl create namespace unified-ns --dry-run=client -o yaml | kubectl apply -f -
 
 echo "===== Set default namespace in kubeconfig ====="
-# Set namespace for current context (run multiple times to ensure it persists)
+# Set namespace for ubuntu user
 kubectl config set-context --current --namespace=unified-ns
 CURRENT_CONTEXT=$(kubectl config current-context)
 kubectl config set-context $CURRENT_CONTEXT --namespace=unified-ns
 
+# Set namespace for root user
+sudo kubectl config set-context --current --namespace=unified-ns
+sudo kubectl config set-context $CURRENT_CONTEXT --namespace=unified-ns
+
 # Verify and update kubeconfig if needed
 if ! grep -q "namespace: unified-ns" /home/ubuntu/.kube/config; then
-    echo "Updating kubeconfig to add namespace..."
+    echo "Updating ubuntu kubeconfig to add namespace..."
     kubectl config set-context $CURRENT_CONTEXT --namespace=unified-ns
+fi
+
+if ! sudo grep -q "namespace: unified-ns" /root/.kube/config; then
+    echo "Updating root kubeconfig to add namespace..."
+    sudo kubectl config set-context $CURRENT_CONTEXT --namespace=unified-ns
 fi
 
 echo "===== Verify namespace configuration ====="
 echo "Current context:"
 kubectl config current-context
 echo ""
-echo "Current namespace:"
+echo "Current namespace (ubuntu user):"
 kubectl config view --minify --output 'jsonpath={..namespace}'
+echo ""
+echo ""
+echo "Current namespace (root user):"
+sudo kubectl config view --minify --output 'jsonpath={..namespace}'
 echo ""
 echo ""
 echo "Namespace details:"
 kubectl get namespace unified-ns
 echo ""
-echo "Testing kubectl get pods (should show unified-ns namespace):"
-kubectl get pods -v=6 2>&1 | grep -i namespace || kubectl get pods
+echo "Testing kubectl get pods for ubuntu user:"
+kubectl get pods 2>&1 | head -3
+echo ""
+echo "Testing kubectl get pods for root user:"
+sudo kubectl get pods 2>&1 | head -3
 
 echo "===== Wait for ingress controller to be ready ====="
 echo "Waiting for ingress-nginx controller..."
