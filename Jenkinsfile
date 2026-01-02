@@ -19,7 +19,7 @@ pipeline {
         stage('Setup Kubernetes Environment') {
             steps {
                 sh '''
-ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@65.2.124.195 << 'EOF'
+ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@52.66.203.177  << 'EOF'
 set -e
 
 echo "===== Waiting for apt locks ====="
@@ -180,8 +180,8 @@ spec:
 EOF
                     '''
 
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@65.2.124.195 "kubectl apply -f -" < deployment.yaml'
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@65.2.124.195 "kubectl apply -f -" < service.yaml'
+                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@52.66.203.177  "kubectl apply -f -" < deployment.yaml'
+                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@52.66.203.177  "kubectl apply -f -" < service.yaml'
                 }
             }
         }
