@@ -8,6 +8,23 @@ pipeline {
         SSH_KEY_PATH = "/var/test.pem"
         SSH_KEY_NAME = "test"
     }
+    stage('Install Terraform') {
+    steps {
+        sh '''
+        if ! command -v terraform >/dev/null 2>&1; then
+            echo "Installing Terraform..."
+            curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor | tee /usr/share/keyrings/hashicorp-archive-keyring.gpg >/dev/null
+            echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/hashicorp.list
+            apt-get update -y
+            apt-get install -y terraform
+        else
+            echo "Terraform already installed"
+        fi
+
+        terraform version
+        '''
+    }
+}
 
     stages {
 
