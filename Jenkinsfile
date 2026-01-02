@@ -7,7 +7,7 @@ pipeline {
         stage('Setup Kubernetes Environment') {
             steps {
                 sh '''
-ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.126.216.62 << 'EOF'
+ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.233.85.210 << 'EOF'
 set -e
 
 echo "===== Waiting for apt locks ====="
@@ -131,9 +131,25 @@ echo "===== Create and configure namespace ====="
 kubectl create namespace unified-ns --dry-run=client -o yaml | kubectl apply -f -
 kubectl config set-context --current --namespace=unified-ns
 
+echo "===== Set default namespace in kubeconfig ====="
+# Ensure the namespace is permanently set in the config file
+kubectl config set-context $(kubectl config current-context) --namespace=unified-ns
+
+# Update the kubeconfig file to persist the namespace setting
+sed -i '/context:/,/name:/ s/namespace:.*/namespace: unified-ns/' /home/ubuntu/.kube/config || true
+sed -i '/contexts:/,/name:.*minikube/!b;/name:.*minikube/a\    namespace: unified-ns' /home/ubuntu/.kube/config 2>/dev/null || true
+
 echo "===== Verify namespace configuration ====="
+echo "Current context:"
+kubectl config current-context
+echo ""
 echo "Current namespace: $(kubectl config view --minify --output 'jsonpath={..namespace}')"
+echo ""
+echo "Namespace details:"
 kubectl get namespace unified-ns
+echo ""
+echo "Testing: kubectl get pods should show unified-ns namespace"
+kubectl get pods 2>&1 | head -1 || echo "No pods yet (namespace: unified-ns)"
 
 echo "===== Wait for ingress controller to be ready ====="
 echo "Waiting for ingress-nginx controller..."
