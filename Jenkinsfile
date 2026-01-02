@@ -8,7 +8,10 @@ pipeline {
         SSH_KEY_PATH = "/var/test.pem"
         SSH_KEY_NAME = "test"
     }
-    stage('Install Terraform') {
+   
+
+    stages {
+        stage('Install Terraform') {
     steps {
         sh '''
         if ! command -v terraform >/dev/null 2>&1; then
@@ -25,8 +28,6 @@ pipeline {
         '''
     }
 }
-
-    stages {
 
         /* ------------------ TERRAFORM EC2 ------------------ */
         stage('Provision EC2 Instance (Terraform)') {
