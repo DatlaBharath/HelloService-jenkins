@@ -7,7 +7,7 @@ pipeline {
         stage('Setup Kubernetes Environment') {
             steps {
                 sh '''
-ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.233.55.209 << 'EOF'
+ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@13.126.216.62 << 'EOF'
 set -e
 
 echo "===== Waiting for apt locks ====="
@@ -111,9 +111,19 @@ echo "===== Verify enabled addons ====="
 sudo minikube addons list | grep -E "metrics-server|ingress"
 
 echo "===== Configure kubectl for ubuntu user ====="
-sudo chmod 644 /root/.kube/config || true
+# Copy minikube certificates to ubuntu user directory
+sudo mkdir -p /home/ubuntu/.minikube
+sudo cp -r /root/.minikube/ca.crt /home/ubuntu/.minikube/ 2>/dev/null || true
+sudo cp -r /root/.minikube/profiles /home/ubuntu/.minikube/ 2>/dev/null || true
+sudo chown -R ubuntu:ubuntu /home/ubuntu/.minikube
+
+# Setup kubectl config for ubuntu user
 mkdir -p /home/ubuntu/.kube
 sudo cp /root/.kube/config /home/ubuntu/.kube/config 2>/dev/null || sudo minikube kubectl -- config view --raw > /home/ubuntu/.kube/config
+
+# Update certificate paths in kubeconfig to point to ubuntu user directory
+sed -i "s|/root/.minikube|/home/ubuntu/.minikube|g" /home/ubuntu/.kube/config
+
 sudo chown -R ubuntu:ubuntu /home/ubuntu/.kube
 export KUBECONFIG=/home/ubuntu/.kube/config
 
