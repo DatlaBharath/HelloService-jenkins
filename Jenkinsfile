@@ -7,42 +7,12 @@ pipeline {
         AWS_DEFAULT_REGION = "ap-south-1"
         SSH_KEY_PATH = "/var/test.pem"
         SSH_KEY_NAME = "test"
+        TERRAFORM_IMAGE = "hashicorp/terraform:1.7.0"
     }
 
     stages {
         
-        /* -------- INSTALL TERRAFORM -------- */
-        stage('Install Terraform') {
-            steps {
-                sh '''
-                if ! command -v terraform >/dev/null 2>&1; then
-                    echo "===== Installing Terraform ====="
-                    
-                    # Install prerequisites
-                    apt-get update -y
-                    apt-get install -y gnupg curl lsb-release software-properties-common wget unzip
-                    
-                    # Download and install Terraform
-                    TERRAFORM_VERSION="1.7.0"
-                    cd /tmp
-                    wget https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
-                    unzip -o terraform_${TERRAFORM_VERSION}_linux_amd64.zip
-                    chmod +x terraform
-                    mv terraform /usr/local/bin/
-                    rm -f terraform_${TERRAFORM_VERSION}_linux_amd64.zip
-                    
-                    echo "✅ Terraform installed successfully"
-                else
-                    echo "✅ Terraform is already installed"
-                fi
-                
-                echo "===== Terraform Version ====="
-                terraform version
-                '''
-            }
-        }
-
-        /* -------- PROVISION EC2 INSTANCE WITH TERRAFORM -------- */
+        /* -------- PROVISION EC2 INSTANCE WITH TERRAFORM (via Docker) -------- */
         stage('Provision EC2 Instance (Terraform)') {
             steps {
                 script {
@@ -233,33 +203,60 @@ volume_size   = 30
 environment   = "jenkins-${BUILD_NUMBER}"
 """
 
-                    echo "===== Terraform Init ====="
-                    dir("${TF_DIR}") {
-                        sh 'terraform init'
-                    }
+                    echo "===== Terraform Init (via Docker) ====="
+                    sh """
+                        docker run --rm \
+                            -v ${TF_DIR}:/workspace \
+                            -w /workspace \
+                            -e AWS_ACCESS_KEY_ID \
+                            -e AWS_SECRET_ACCESS_KEY \
+                            -e AWS_SESSION_TOKEN \
+                            -e AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION} \
+                            ${TERRAFORM_IMAGE} init
+                    """
                     
-                    echo "===== Terraform Validate ====="
-                    dir("${TF_DIR}") {
-                        sh 'terraform validate'
-                    }
+                    echo "===== Terraform Validate (via Docker) ====="
+                    sh """
+                        docker run --rm \
+                            -v ${TF_DIR}:/workspace \
+                            -w /workspace \
+                            ${TERRAFORM_IMAGE} validate
+                    """
                     
-                    echo "===== Terraform Plan ====="
-                    dir("${TF_DIR}") {
-                        sh 'terraform plan -out=tfplan'
-                    }
+                    echo "===== Terraform Plan (via Docker) ====="
+                    sh """
+                        docker run --rm \
+                            -v ${TF_DIR}:/workspace \
+                            -w /workspace \
+                            -e AWS_ACCESS_KEY_ID \
+                            -e AWS_SECRET_ACCESS_KEY \
+                            -e AWS_SESSION_TOKEN \
+                            -e AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION} \
+                            ${TERRAFORM_IMAGE} plan -out=tfplan
+                    """
                     
-                    echo "===== Terraform Apply ====="
-                    dir("${TF_DIR}") {
-                        sh 'terraform apply -auto-approve tfplan'
-                    }
+                    echo "===== Terraform Apply (via Docker) ====="
+                    sh """
+                        docker run --rm \
+                            -v ${TF_DIR}:/workspace \
+                            -w /workspace \
+                            -e AWS_ACCESS_KEY_ID \
+                            -e AWS_SECRET_ACCESS_KEY \
+                            -e AWS_SESSION_TOKEN \
+                            -e AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION} \
+                            ${TERRAFORM_IMAGE} apply -auto-approve tfplan
+                    """
                     
-                    echo "===== Capturing EC2 Public IP ====="
-                    dir("${TF_DIR}") {
-                        EC2_PUBLIC_IP = sh(
-                            script: 'terraform output -raw public_ip',
-                            returnStdout: true
-                        ).trim()
-                    }
+                    echo "===== Capturing EC2 Public IP (via Docker) ====="
+                    EC2_PUBLIC_IP = sh(
+                        script: """
+                            docker run --rm \
+                                -v ${TF_DIR}:/workspace \
+                                -w /workspace \
+                                ${TERRAFORM_IMAGE} output -raw public_ip
+                        """,
+                        returnStdout: true
+                    ).trim()
                     
                     echo "✅ EC2 Instance Provisioned!"
                     echo "📍 Public IP: ${EC2_PUBLIC_IP}"
@@ -496,7 +493,8 @@ echo "✅ Kubernetes Environment Setup Complete!"
         success {
             echo '✅ Pipeline completed successfully!'
             echo "📍 EC2 Instance: ${EC2_PUBLIC_IP}"
-            echo "💡 To destroy infrastructure: cd ${TF_DIR} && terraform destroy -auto-approve"
+            echo "💡 To destroy infrastructure later, run:"
+            echo "   docker run --rm -v ${TF_DIR}:/workspace -w /workspace -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION} ${TERRAFORM_IMAGE} destroy -auto-approve"
         }
         failure {
             echo '❌ Pipeline failed!'
@@ -505,9 +503,15 @@ echo "✅ Kubernetes Environment Setup Complete!"
         cleanup {
             echo '🧹 Cleaning up workspace...'
             // Uncomment to auto-destroy infrastructure:
-            // dir("${TF_DIR}") {
-            //     sh 'terraform destroy -auto-approve'
-            // }
+            // sh """
+            //     docker run --rm \
+            //         -v ${TF_DIR}:/workspace \
+            //         -w /workspace \
+            //         -e AWS_ACCESS_KEY_ID \
+            //         -e AWS_SECRET_ACCESS_KEY \
+            //         -e AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION} \
+            //         ${TERRAFORM_IMAGE} destroy -auto-approve
+            // """
         }
     }
 }
