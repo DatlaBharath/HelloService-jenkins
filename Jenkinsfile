@@ -7,7 +7,7 @@ pipeline {
         stage('Setup Kubernetes Environment') {
             steps {
                 sh '''
-ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@43.204.22.1 << 'EOF'
+ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@3.110.184.89 << 'EOF'
 set -e
 
 echo "===== Waiting for apt locks ====="
@@ -105,9 +105,15 @@ sudo minikube addons enable metrics-server
 sudo minikube addons enable ingress
 
 echo "===== Configure kubectl for ubuntu user ====="
-sudo chmod 644 /root/.kube/config || true
+# Fix permissions on minikube certificates
+sudo chmod -R 755 /root/.minikube
+sudo chmod 644 /root/.minikube/ca.crt
+sudo chmod 644 /root/.minikube/profiles/minikube/client.crt
+sudo chmod 644 /root/.minikube/profiles/minikube/client.key
+
+# Copy kubeconfig to ubuntu user
 mkdir -p /home/ubuntu/.kube
-sudo cp /root/.kube/config /home/ubuntu/.kube/config 2>/dev/null || sudo minikube kubectl -- config view --raw > /home/ubuntu/.kube/config
+sudo cp /root/.kube/config /home/ubuntu/.kube/config
 sudo chown -R ubuntu:ubuntu /home/ubuntu/.kube
 export KUBECONFIG=/home/ubuntu/.kube/config
 
