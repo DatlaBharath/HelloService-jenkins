@@ -129,27 +129,32 @@ export KUBECONFIG=/home/ubuntu/.kube/config
 
 echo "===== Create and configure namespace ====="
 kubectl create namespace unified-ns --dry-run=client -o yaml | kubectl apply -f -
-kubectl config set-context --current --namespace=unified-ns
 
 echo "===== Set default namespace in kubeconfig ====="
-# Ensure the namespace is permanently set in the config file
-kubectl config set-context $(kubectl config current-context) --namespace=unified-ns
+# Set namespace for current context (run multiple times to ensure it persists)
+kubectl config set-context --current --namespace=unified-ns
+CURRENT_CONTEXT=$(kubectl config current-context)
+kubectl config set-context $CURRENT_CONTEXT --namespace=unified-ns
 
-# Update the kubeconfig file to persist the namespace setting
-sed -i '/context:/,/name:/ s/namespace:.*/namespace: unified-ns/' /home/ubuntu/.kube/config || true
-sed -i '/contexts:/,/name:.*minikube/!b;/name:.*minikube/a\    namespace: unified-ns' /home/ubuntu/.kube/config 2>/dev/null || true
+# Verify and update kubeconfig if needed
+if ! grep -q "namespace: unified-ns" /home/ubuntu/.kube/config; then
+    echo "Updating kubeconfig to add namespace..."
+    kubectl config set-context $CURRENT_CONTEXT --namespace=unified-ns
+fi
 
 echo "===== Verify namespace configuration ====="
 echo "Current context:"
 kubectl config current-context
 echo ""
-echo "Current namespace: $(kubectl config view --minify --output 'jsonpath={..namespace}')"
+echo "Current namespace:"
+kubectl config view --minify --output 'jsonpath={..namespace}'
+echo ""
 echo ""
 echo "Namespace details:"
 kubectl get namespace unified-ns
 echo ""
-echo "Testing: kubectl get pods should show unified-ns namespace"
-kubectl get pods 2>&1 | head -1 || echo "No pods yet (namespace: unified-ns)"
+echo "Testing kubectl get pods (should show unified-ns namespace):"
+kubectl get pods -v=6 2>&1 | grep -i namespace || kubectl get pods
 
 echo "===== Wait for ingress controller to be ready ====="
 echo "Waiting for ingress-nginx controller..."
