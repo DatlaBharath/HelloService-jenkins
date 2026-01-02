@@ -15,11 +15,11 @@ pipeline {
             }
         }
 
-        /* -------- SETUP KUBERNETES ENVIRONMENT (HARDENED) ----- */
+        /* -------- SETUP KUBERNETES ENVIRONMENT (FIXED) ----- */
         stage('Setup Kubernetes Environment') {
             steps {
                 sh '''
-ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@52.66.203.177  << 'EOF'
+ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@52.66.203.177 << 'EOF'
 set -e
 
 echo "===== Waiting for apt locks ====="
@@ -57,8 +57,10 @@ if ! command -v docker >/dev/null 2>&1; then
     sudo apt-get install -y docker-ce docker-ce-cli containerd.io
     sudo systemctl enable docker
     sudo systemctl start docker
-    sudo usermod -aG docker ubuntu
 fi
+
+echo "===== Add user to docker group ====="
+sudo usermod -aG docker ubuntu
 
 echo "===== Install Redis ====="
 if ! command -v redis-server >/dev/null 2>&1; then
@@ -86,14 +88,24 @@ if ! command -v minikube >/dev/null 2>&1; then
     sudo mv minikube-linux-amd64 /usr/local/bin/minikube
 fi
 
-echo "===== Start Minikube ====="
-minikube start --driver=docker || minikube start
+echo "===== Stop any existing Minikube instance ====="
+sudo minikube delete --all --purge || true
+
+echo "===== Start Minikube with sudo (workaround for docker group) ====="
+sudo minikube start --driver=docker --force
+
+echo "===== Configure kubectl for ubuntu user ====="
+sudo chmod 644 /root/.kube/config || true
+mkdir -p /home/ubuntu/.kube
+sudo cp /root/.kube/config /home/ubuntu/.kube/config 2>/dev/null || sudo minikube kubectl -- config view --raw > /home/ubuntu/.kube/config
+sudo chown -R ubuntu:ubuntu /home/ubuntu/.kube
+export KUBECONFIG=/home/ubuntu/.kube/config
 
 echo "===== Verify Setup ====="
-docker --version
+sudo docker --version
 redis-cli ping
 kubectl version --client
-minikube status
+sudo minikube status
 EOF
                 '''
             }
@@ -180,8 +192,8 @@ spec:
 EOF
                     '''
 
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@52.66.203.177  "kubectl apply -f -" < deployment.yaml'
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@52.66.203.177  "kubectl apply -f -" < service.yaml'
+                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@52.66.203.177 "kubectl apply -f -" < deployment.yaml'
+                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@52.66.203.177 "kubectl apply -f -" < service.yaml'
                 }
             }
         }
