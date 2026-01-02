@@ -1,25 +1,13 @@
 pipeline {
     agent any
 
-    tools {
-        maven 'Maven'
-    }
-
     stages {
 
-        /* -------------------- CHECKOUT -------------------- */
-        stage('Checkout') {
-            steps {
-                git branch: 'main',
-                    url: 'https://github.com/DatlaBharath/HelloService-jenkins'
-            }
-        }
-
-        /* -------- SETUP KUBERNETES ENVIRONMENT (FIXED) ----- */
+        /* -------- SETUP KUBERNETES ENVIRONMENT WITH POSTGRESQL ----- */
         stage('Setup Kubernetes Environment') {
             steps {
                 sh '''
-ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@52.66.203.177 << 'EOF'
+ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@43.204.22.1 << 'EOF'
 set -e
 
 echo "===== Waiting for apt locks ====="
@@ -61,6 +49,24 @@ fi
 
 echo "===== Add user to docker group ====="
 sudo usermod -aG docker ubuntu
+
+echo "===== Install PostgreSQL ====="
+if ! command -v psql >/dev/null 2>&1; then
+    sudo apt-get install -y postgresql postgresql-contrib
+    sudo systemctl enable postgresql
+    sudo systemctl start postgresql
+    
+    # Configure PostgreSQL to accept connections
+    sudo sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/g" /etc/postgresql/*/main/postgresql.conf
+    echo "host    all             all             0.0.0.0/0               md5" | sudo tee -a /etc/postgresql/*/main/pg_hba.conf
+    
+    # Create default user and database
+    sudo -u postgres psql -c "CREATE USER appuser WITH PASSWORD 'apppassword';" || true
+    sudo -u postgres psql -c "CREATE DATABASE appdb OWNER appuser;" || true
+    sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE appdb TO appuser;" || true
+    
+    sudo systemctl restart postgresql
+fi
 
 echo "===== Install Redis ====="
 if ! command -v redis-server >/dev/null 2>&1; then
@@ -107,6 +113,7 @@ export KUBECONFIG=/home/ubuntu/.kube/config
 
 echo "===== Verify Setup ====="
 sudo docker --version
+psql --version
 redis-cli ping
 kubectl version --client
 sudo minikube status
@@ -115,105 +122,27 @@ echo "===== Create and configure namespace ====="
 kubectl create namespace unified-ns --dry-run=client -o yaml | kubectl apply -f -
 kubectl config set-context --current --namespace=unified-ns
 echo "Current namespace: $(kubectl config view --minify --output 'jsonpath={..namespace}')"
+
+echo "===== PostgreSQL Connection Info ====="
+echo "PostgreSQL is installed and running on localhost:5432"
+echo "Database: appdb"
+echo "User: appuser"
+echo "Password: apppassword"
+
+echo ""
+echo "✅ Kubernetes Environment Setup Complete!"
 EOF
                 '''
-            }
-        }
-
-        /* -------------------- BUILD -------------------- */
-        stage('Build') {
-            steps {
-                sh 'mvn clean package -DskipTests'
-            }
-        }
-
-        /* ---------------- DOCKER BUILD ---------------- */
-        stage('Build Docker Image') {
-            steps {
-                script {
-                    def imageName = "sakthisiddu1/helloservice-jenkins:${env.BUILD_NUMBER}"
-                    sh "docker build -t ${imageName} ."
-                }
-            }
-        }
-
-        /* ---------------- PUSH IMAGE ------------------ */
-        stage('Push Docker Image') {
-            steps {
-                script {
-                    withCredentials([
-                        usernamePassword(
-                            credentialsId: 'dockerhub_credentials',
-                            usernameVariable: 'DOCKER_USERNAME',
-                            passwordVariable: 'DOCKER_PASSWORD'
-                        )
-                    ]) {
-                        sh 'echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_USERNAME} --password-stdin'
-                        def imageName = "sakthisiddu1/helloservice-jenkins:${env.BUILD_NUMBER}"
-                        sh "docker push ${imageName}"
-                    }
-                }
-            }
-        }
-
-        /* --------------- K8s DEPLOY ------------------- */
-        stage('Deploy to Kubernetes') {
-            steps {
-                script {
-                    sh '''
-cat <<EOF > deployment.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: helloservice-jenkins-deployment
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: helloservice-jenkins
-  template:
-    metadata:
-      labels:
-        app: helloservice-jenkins
-    spec:
-      containers:
-      - name: helloservice-jenkins
-        image: sakthisiddu1/helloservice-jenkins:${BUILD_NUMBER}
-        ports:
-        - containerPort: 5000
-EOF
-                    '''
-
-                    sh '''
-cat <<EOF > service.yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: helloservice-jenkins-service
-spec:
-  type: NodePort
-  selector:
-    app: helloservice-jenkins
-  ports:
-  - port: 5000
-    targetPort: 5000
-    nodePort: 30007
-EOF
-                    '''
-
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@52.66.203.177 "kubectl apply -f -" < deployment.yaml'
-                    sh 'ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@52.66.203.177 "kubectl apply -f -" < service.yaml'
-                }
             }
         }
     }
 
     post {
         success {
-            echo '✅ Deployment was successful'
+            echo '✅ Setup was successful'
         }
         failure {
-            echo '❌ Deployment failed'
+            echo '❌ Setup failed'
         }
     }
 }
