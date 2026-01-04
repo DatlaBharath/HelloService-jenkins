@@ -18,9 +18,12 @@ pipeline {
                 script {
                     echo "===== Creating Terraform Configuration ====="
                     
+                    // Create terraform directory
                     sh "mkdir -p ${TF_DIR}"
-
-                    writeFile file: "${TF_DIR}/main.tf", text: '''
+                    
+                    // Write Terraform files using shell heredoc to ensure they're created properly
+                    sh """
+                        cat > ${TF_DIR}/main.tf << 'TERRAFORM_MAIN_EOF'
 terraform {
   required_providers {
     aws = {
@@ -134,9 +137,9 @@ resource "aws_instance" "k8s" {
     ManagedBy   = "Terraform"
   }
 }
-'''
+TERRAFORM_MAIN_EOF
 
-                    writeFile file: "${TF_DIR}/variables.tf", text: '''
+                        cat > ${TF_DIR}/variables.tf << 'TERRAFORM_VARS_EOF'
 variable "aws_region" {
   description = "AWS region"
   type        = string
@@ -171,9 +174,9 @@ variable "environment" {
   type        = string
   default     = "dev"
 }
-'''
+TERRAFORM_VARS_EOF
 
-                    writeFile file: "${TF_DIR}/outputs.tf", text: '''
+                        cat > ${TF_DIR}/outputs.tf << 'TERRAFORM_OUTPUTS_EOF'
 output "instance_id" {
   description = "EC2 instance ID"
   value       = aws_instance.k8s.id
@@ -193,15 +196,22 @@ output "security_group_id" {
   description = "Security group ID"
   value       = aws_security_group.k8s_sg.id
 }
-'''
+TERRAFORM_OUTPUTS_EOF
 
-                    writeFile file: "${TF_DIR}/terraform.tfvars", text: """
+                        cat > ${TF_DIR}/terraform.tfvars << TERRAFORM_TFVARS_EOF
 aws_region    = "${AWS_DEFAULT_REGION}"
 key_name      = "${SSH_KEY_NAME}"
 instance_type = "t3.large"
 volume_size   = 30
 environment   = "jenkins-${BUILD_NUMBER}"
-"""
+TERRAFORM_TFVARS_EOF
+
+                        echo "===== Verifying Terraform files ====="
+                        ls -la ${TF_DIR}/
+                        echo ""
+                        echo "===== Contents of main.tf ====="
+                        head -20 ${TF_DIR}/main.tf
+                    """
 
                     echo "===== Terraform Init (via Docker) ====="
                     sh """
