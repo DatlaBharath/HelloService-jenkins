@@ -7,7 +7,7 @@ pipeline {
         stage('Setup Kubernetes Environment') {
             steps {
                 sh '''
-ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@15.207.107.7 << 'EOF'
+ssh -i /var/test.pem -o StrictHostKeyChecking=no ubuntu@3.110.187.228 << 'EOF'
 set -e
 
 echo "===== Waiting for apt locks ====="
