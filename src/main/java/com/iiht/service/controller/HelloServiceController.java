@@ -72,6 +72,6 @@ public class HelloServiceController {
         for (int i = 1; i <= a; i++) {
             fact *= i;
         }
-        return fact + "" + header.toString();
+        return String.valueOf(fact);
     }
 }
