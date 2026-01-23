@@ -1,11 +1,14 @@
 package com.iiht.service.controller;
 
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.regex.Pattern;
 
 @RestController
 public class HelloServiceController {
@@ -50,8 +53,7 @@ public class HelloServiceController {
     }
 
     @GetMapping("/greet")
-    public String greet() 
-    {
+    public String greet() {
         return "Good Morning, Welcome To Demo Project";
     }
 
@@ -60,18 +62,36 @@ public class HelloServiceController {
         if (a < 0 || b < 0) {
             return "Inputs must be non-negative integers.";
         }
-        return (a+b) + "";
+        return (a + b) + "";
     }
 
     @GetMapping("/fact/{a}")
-    public String factorial(@RequestHeader HttpHeaders header, @PathVariable int a) {
-        if (a < 0) {
-            return "Input must be a non-negative integer.";
+    public ResponseEntity<String> factorial(@RequestHeader HttpHeaders headers, @PathVariable int a) {
+        // Validate HttpHeaders for malicious input
+        if (headers != null) {
+            for (String headerName : headers.keySet()) {
+                String headerValue = headers.getFirst(headerName);
+                if (!isValidHeaderValue(headerValue)) {
+                    return ResponseEntity.badRequest().body("Invalid header value detected.");
+                }
+            }
         }
+
+        // Validate input for factorial calculation
+        if (a < 0) {
+            return ResponseEntity.badRequest().body("Input must be a non-negative integer.");
+        }
+
         int fact = 1;
         for (int i = 1; i <= a; i++) {
             fact *= i;
         }
-        return String.valueOf(fact);
+        return ResponseEntity.ok(String.valueOf(fact));
+    }
+
+    private boolean isValidHeaderValue(String value) {
+        // Allow only alphanumeric characters and safe symbols in headers
+        String safePattern = "^[a-zA-Z0-9-_:;,.]*$";
+        return value != null && Pattern.matches(safePattern, value);
     }
 }
