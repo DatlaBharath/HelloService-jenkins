@@ -4,12 +4,11 @@ import io.github.bucket4j.Bucket;
 import io.github.bucket4j.Bucket4j;
 import io.github.bucket4j.Refill;
 import io.github.bucket4j.Bandwidth;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
 import java.util.regex.Pattern;
@@ -17,11 +16,11 @@ import java.util.regex.Pattern;
 @RestController
 public class HelloServiceController {
 
-    // Rate limiting bucket for requests
     private final Bucket bucket;
 
-    public HelloServiceController() {
-        Bandwidth limit = Bandwidth.classic(10, Refill.greedy(10, Duration.ofSeconds(1)));
+    public HelloServiceController(RateLimitConfig rateLimitConfig) {
+        Bandwidth limit = Bandwidth.classic(rateLimitConfig.getCapacity(),
+                                            Refill.greedy(rateLimitConfig.getCapacity(), Duration.ofSeconds(rateLimitConfig.getRefillDuration())));
         this.bucket = Bucket4j.builder().addLimit(limit).build();
     }
 
@@ -117,5 +116,23 @@ public class HelloServiceController {
     private boolean isValidHeaderValue(String value) {
         String safePattern = "^[a-zA-Z0-9-_:;,.]+$";
         return value != null && Pattern.matches(safePattern, value);
+    }
+}
+
+@Component
+class RateLimitConfig {
+
+    @Value("${rate.limit.capacity:10}")
+    private int capacity;
+
+    @Value("${rate.limit.refill.duration:1}")
+    private int refillDuration;
+
+    public int getCapacity() {
+        return capacity;
+    }
+
+    public int getRefillDuration() {
+        return refillDuration;
     }
 }

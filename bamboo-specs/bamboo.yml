@@ -16,9 +16,9 @@ Build and Package:
     tasks:
     - script:
         - mvn clean install -DskipTests
-        - docker build -t ${bamboo.dockerUser}/helloservice-jenkins:${bamboo.buildNumber} .
-        - echo ${bamboo.dockerPass} | docker login -u ${bamboo.dockerUser} --password-stdin
-        - docker push ${bamboo.dockerUser}/helloservice-jenkins:${bamboo.buildNumber}
+        - docker build -t ${DOCKER_USER}/helloservice-jenkins:${bamboo.buildNumber} .
+        - echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin
+        - docker push ${DOCKER_USER}/helloservice-jenkins:${bamboo.buildNumber}
         
     - script:
         - echo "Creating deployment.yaml"
@@ -40,7 +40,7 @@ Build and Package:
                     spec:
                         containers:
                         - name: helloservice-jenkins
-                          image: ${bamboo.dockerUser}/helloservice-jenkins:${bamboo.buildNumber}
+                          image: ${DOCKER_USER}/helloservice-jenkins:${bamboo.buildNumber}
                           ports:
                           - containerPort: 5000
             EOF
