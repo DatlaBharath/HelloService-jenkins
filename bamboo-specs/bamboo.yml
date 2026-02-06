@@ -15,9 +15,28 @@ stages:
 Build and Package:
     tasks:
     - script:
+        - |
+          # Validate DOCKER_USER
+          if [[ ! ${DOCKER_USER} =~ ^[a-zA-Z0-9]+$ ]]; then
+            echo "Error: Invalid DOCKER_USER value. It must be alphanumeric."
+            exit 1
+          fi
+
+          # Validate bamboo.buildNumber
+          if [[ ! ${bamboo.buildNumber} =~ ^[0-9]+$ ]]; then
+            echo "Error: Invalid bamboo.buildNumber value. It must be numeric."
+            exit 1
+          fi
+
+          # Securely handle DOCKER_PASS
+          if [[ -z ${DOCKER_PASS} ]]; then
+            echo "Error: DOCKER_PASS is empty."
+            exit 1
+          fi
+
         - mvn clean install -DskipTests
         - docker build -t ${DOCKER_USER}/helloservice-jenkins:${bamboo.buildNumber} .
-        - echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin
+        - echo "${DOCKER_PASS}" | docker login -u "${DOCKER_USER}" --password-stdin
         - docker push ${DOCKER_USER}/helloservice-jenkins:${bamboo.buildNumber}
         
     - script:
@@ -64,6 +83,6 @@ Build and Package:
         
     - script:
         - echo "Deploying to Kubernetes"
-        - rsync -e "ssh -o StrictHostKeyChecking=no -i /var/test.pem" -a deployment.yaml service.yaml ubuntu@13.127.208.46:/home/ubuntu/
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.127.208.46 "kubectl apply -f /home/ubuntu/deployment.yaml && kubectl rollout status deployment/helloservice-jenkins-deployment || kubectl rollout undo deployment/helloservice-jenkins-deployment"
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.127.208.46 "kubectl apply -f /home/ubuntu/service.yaml"
+        - rsync -e "ssh -o StrictHostKeyChecking=no -i ${SSH_KEY_PATH}" -a deployment.yaml service.yaml ubuntu@13.127.208.46:/home/ubuntu/
+        - ssh -o StrictHostKeyChecking=no -i ${SSH_KEY_PATH} ubuntu@13.127.208.46 "kubectl apply -f /home/ubuntu/deployment.yaml && kubectl rollout status deployment/helloservice-jenkins-deployment || kubectl rollout undo deployment/helloservice-jenkins-deployment"
+        - ssh -o StrictHostKeyChecking=no -i ${SSH_KEY_PATH} ubuntu@13.127.208.46 "kubectl apply -f /home/ubuntu/service.yaml"
