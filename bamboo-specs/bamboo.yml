@@ -44,6 +44,10 @@ Build and Package:
                           image: ${bamboo.dockerUser}/helloservice-jenkins:${bamboo.buildNumber}
                           ports:
                           - containerPort: 5000
+                          securityContext:
+                            runAsUser: 1000
+                            runAsGroup: 3000
+                            allowPrivilegeEscalation: false
             EOF
         
         - echo "Creating service.yaml"
@@ -65,6 +69,6 @@ Build and Package:
         
     - script:
         - echo "Deploying to Kubernetes"
-        - scp -o StrictHostKeyChecking=no -i /var/test.pem deployment.yaml service.yaml ubuntu@13.127.208.46:/home/ubuntu/
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.127.208.46 "kubectl apply -f /home/ubuntu/deployment.yaml"
-        - ssh -o StrictHostKeyChecking=no -i /var/test.pem ubuntu@13.127.208.46 "kubectl apply -f /home/ubuntu/service.yaml"
+        - scp -o StrictHostKeyChecking=yes -o Cipher=AES256-GCM -i /path/to/secure.pem deployment.yaml service.yaml ubuntu@13.127.208.46:/home/ubuntu/
+        - ssh -o StrictHostKeyChecking=yes -i /path/to/secure.pem ubuntu@13.127.208.46 "kubectl apply -f /home/ubuntu/deployment.yaml"
+        - ssh -o StrictHostKeyChecking=yes -i /path/to/secure.pem ubuntu@13.127.208.46 "kubectl apply -f /home/ubuntu/service.yaml"
