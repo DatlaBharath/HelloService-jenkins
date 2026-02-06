@@ -56,12 +56,18 @@ class SecurityConfiguration {
         String[] rawEndpoints = new String[]{"/eureka/**"};
         return Arrays.stream(rawEndpoints)
                      .filter(this::isValidEndpoint)
+                     .map(this::sanitizeEndpoint)
                      .toList();
     }
 
     private boolean isValidEndpoint(String endpoint) {
-        // Basic validation to ensure endpoint conforms to expected patterns
+        // Ensures endpoint matches specific patterns
         return endpoint != null && endpoint.matches("^(/[a-zA-Z0-9\\-_/]+)+$");
+    }
+
+    private String sanitizeEndpoint(String endpoint) {
+        // Sanitizes endpoint to remove potential malicious characters
+        return endpoint.replaceAll("[^a-zA-Z0-9\\-_/]", "");
     }
 
     @Bean
