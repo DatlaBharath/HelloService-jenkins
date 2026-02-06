@@ -22,7 +22,7 @@ pipeline:
                       type: Inline
                       spec:
                         script: |
-                          echo "Cloning the  repo..."
+                          echo "Cloning the repo..."
                           rm -rf helloservice
                           git clone https://github.com/DatlaBharath/helloservice.git
                           cd helloservice
@@ -68,10 +68,10 @@ pipeline:
                     environmentVariables:
                       - name: DOCKERHUB_USERNAME
                         type: String
-                        value: <+secrets.getValue("dockerhub-username")>
+                        value: <+secretsManager.getDynamic("dockerhub-username")>
                       - name: DOCKERHUB_PASSWORD
                         type: String
-                        value: <+secrets.getValue("dockerhub-password")>
+                        value: <+secretsManager.getDynamic("dockerhub-password")>
                     source:
                       type: Inline
                       spec:
