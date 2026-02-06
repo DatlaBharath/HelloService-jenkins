@@ -20,6 +20,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.List;
 
 @SpringBootApplication
 @EnableDiscoveryClient
@@ -40,7 +42,7 @@ class SecurityConfiguration {
         http
             .csrf().disable()
             .authorizeRequests()
-            .requestMatchers(getAuthenticatedEndpoints()).authenticated()
+            .requestMatchers(getAuthenticatedEndpoints().toArray(new String[0])).authenticated()
             .and()
             .oauth2ResourceServer()
             .jwt()
@@ -49,9 +51,17 @@ class SecurityConfiguration {
         return http.build();
     }
 
-    private String[] getAuthenticatedEndpoints() {
-        // Load endpoints from configuration or environment variables
-        return new String[]{"/eureka/**"};
+    private List<String> getAuthenticatedEndpoints() {
+        // Validate and sanitize endpoints loaded from configuration or environment variables
+        String[] rawEndpoints = new String[]{"/eureka/**"};
+        return Arrays.stream(rawEndpoints)
+                     .filter(this::isValidEndpoint)
+                     .toList();
+    }
+
+    private boolean isValidEndpoint(String endpoint) {
+        // Basic validation to ensure endpoint conforms to expected patterns
+        return endpoint != null && endpoint.matches("^(/[a-zA-Z0-9\\-_/]+)+$");
     }
 
     @Bean
