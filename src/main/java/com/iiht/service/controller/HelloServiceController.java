@@ -9,6 +9,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.HtmlUtils;
 
 import java.time.Duration;
 import java.util.regex.Pattern;
@@ -33,7 +34,7 @@ public class HelloServiceController {
         if (isRateLimitExceeded()) {
             return ResponseEntity.status(429).body("Too Many Requests - Rate limit exceeded");
         }
-        return ResponseEntity.ok("<!DOCTYPE html>" +
+        String htmlContent = "<!DOCTYPE html>" +
                 "<html lang='en'>" +
                 "<head>" +
                 "<meta charset='UTF-8'>" +
@@ -67,7 +68,9 @@ public class HelloServiceController {
                 "<p>Your application is up and running successfully!</p>" +
                 "</div>" +
                 "</body>" +
-                "</html>");
+                "</html>";
+        String sanitizedHtmlContent = HtmlUtils.htmlEscape(htmlContent);
+        return ResponseEntity.ok(sanitizedHtmlContent);
     }
 
     @GetMapping("/greet")

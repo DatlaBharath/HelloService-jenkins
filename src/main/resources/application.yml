@@ -9,8 +9,8 @@ eureka:
     fetchRegistry: true
     serviceUrl:
       defaultZone: https://localhost:8761/eureka/
-    username: eurekaUser
-    password: securePassword
+    username: ${EUREKA_USERNAME}
+    password: ${EUREKA_PASSWORD}
   instance:
     hostname: localhost
     securePortEnabled: true
@@ -20,7 +20,7 @@ security:
   ssl:
     enabled: true
     key-store: classpath:keystore.jks
-    key-store-password: storepassword
+    key-store-password: ${KEY_STORE_PASSWORD}
     key-alias: selfsigned
     trust-store: classpath:truststore.jks
-    trust-store-password: trustpassword
+    trust-store-password: ${TRUST_STORE_PASSWORD}
