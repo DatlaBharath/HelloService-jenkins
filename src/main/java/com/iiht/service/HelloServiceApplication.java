@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @SpringBootApplication
 @EnableDiscoveryClient
@@ -55,19 +56,24 @@ class SecurityConfiguration {
         // Validate and sanitize endpoints loaded from configuration or environment variables
         String[] rawEndpoints = new String[]{"/eureka/**"};
         return Arrays.stream(rawEndpoints)
-                     .filter(this::isValidEndpoint)
                      .map(this::sanitizeEndpoint)
-                     .toList();
+                     .filter(this::isValidEndpoint)
+                     .collect(Collectors.toList());
     }
 
     private boolean isValidEndpoint(String endpoint) {
-        // Ensures endpoint matches specific patterns
+        // Ensures endpoint matches specific patterns after canonicalization
         return endpoint != null && endpoint.matches("^(/[a-zA-Z0-9\\-_/]+)+$");
     }
 
     private String sanitizeEndpoint(String endpoint) {
-        // Sanitizes endpoint to remove potential malicious characters
-        return endpoint.replaceAll("[^a-zA-Z0-9\\-_/]", "");
+        // Canonicalize and sanitize endpoint to remove potential malicious characters
+        if (endpoint == null) {
+            return "";
+        }
+        endpoint = endpoint.replaceAll("\\.{2,}", ""); // Remove path traversal patterns
+        endpoint = endpoint.replaceAll("[^a-zA-Z0-9\\-_/]", ""); // Remove other malicious characters
+        return endpoint.trim();
     }
 
     @Bean
