@@ -82,18 +82,24 @@ public class HelloServiceController {
     }
 
     @GetMapping("/add/{a}/{b}")
-    public ResponseEntity<String> add(@PathVariable int a, @PathVariable int b) {
+    public ResponseEntity<String> add(@PathVariable String a, @PathVariable String b) {
         if (isRateLimitExceeded()) {
             return ResponseEntity.status(429).body("Too Many Requests - Rate limit exceeded");
         }
-        if (a < 0 || b < 0) {
-            return ResponseEntity.badRequest().body("Inputs must be non-negative integers.");
+        try {
+            int numA = Integer.parseInt(a);
+            int numB = Integer.parseInt(b);
+            if (numA < 0 || numB < 0) {
+                return ResponseEntity.badRequest().body("Inputs must be non-negative integers.");
+            }
+            return ResponseEntity.ok(String.valueOf(numA + numB));
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().body("Invalid input. Inputs must be integers.");
         }
-        return ResponseEntity.ok(String.valueOf(a + b));
     }
 
     @GetMapping("/fact/{a}")
-    public ResponseEntity<String> factorial(@RequestHeader HttpHeaders headers, @PathVariable int a) {
+    public ResponseEntity<String> factorial(@RequestHeader HttpHeaders headers, @PathVariable String a) {
         if (isRateLimitExceeded()) {
             return ResponseEntity.status(429).body("Too Many Requests - Rate limit exceeded");
         }
@@ -105,15 +111,22 @@ public class HelloServiceController {
                 }
             }
         }
-        if (a < 0) {
-            return ResponseEntity.badRequest().body("Input must be a non-negative integer.");
+        try {
+            int numA = Integer.parseInt(a);
+            if (numA < 0) {
+                return ResponseEntity.badRequest().body("Input must be a non-negative integer.");
+            }
+            if (numA > 20) {
+                return ResponseEntity.badRequest().body("Input is too large to compute factorial.");
+            }
+            long fact = 1;
+            for (int i = 1; i <= numA; i++) {
+                fact *= i;
+            }
+            return ResponseEntity.ok(String.valueOf(fact));
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().body("Invalid input. Input must be an integer.");
         }
-
-        int fact = 1;
-        for (int i = 1; i <= a; i++) {
-            fact *= i;
-        }
-        return ResponseEntity.ok(String.valueOf(fact));
     }
 
     private boolean isValidHeaderValue(String value) {
