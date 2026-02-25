@@ -78,7 +78,7 @@ Build and Package:
                 ports:
                 - port: 5000
                   targetPort: 5000
-                  nodePort: 30007
+                  nodePort: ${KUBERNETES_NODE_PORT}
             EOF
         
     - script:

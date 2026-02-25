@@ -1,26 +1,55 @@
-spring:
-  application:
-    name: helloservice
-server:
-  port: 5000
-eureka:
-  client:
-    registerWithEureka: true
-    fetchRegistry: true
-    serviceUrl:
-      defaultZone: https://localhost:8761/eureka/ # Only trusted domains are allowed
-    username: ${EUREKA_USERNAME}
-    password: ${EUREKA_PASSWORD}
-  instance:
-    hostname: localhost
-    securePortEnabled: true
-    nonSecurePortEnabled: false
+package com.example.helloservice.config;
 
-security:
-  ssl:
-    enabled: true
-    key-store: classpath:keystore.jks
-    key-store-password: ${KEY_STORE_PASSWORD}
-    key-alias: selfsigned
-    trust-store: classpath:truststore.jks
-    trust-store-password: ${TRUST_STORE_PASSWORD}
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class ApplicationConfig {
+
+    @Value("${EUREKA_USERNAME}")
+    private String eurekaUsername;
+
+    @Value("${EUREKA_PASSWORD}")
+    private String eurekaPassword;
+
+    @Value("${KEY_STORE_PASSWORD}")
+    private String keyStorePassword;
+
+    @Value("${TRUST_STORE_PASSWORD}")
+    private String trustStorePassword;
+
+    public ApplicationConfig() {
+        validateInput("EUREKA_USERNAME", eurekaUsername);
+        validateInput("EUREKA_PASSWORD", eurekaPassword);
+        validateInput("KEY_STORE_PASSWORD", keyStorePassword);
+        validateInput("TRUST_STORE_PASSWORD", trustStorePassword);
+    }
+
+    private void validateInput(String variableName, String value) {
+        if (value == null || value.isEmpty()) {
+            throw new IllegalArgumentException(variableName + " cannot be null or empty.");
+        }
+        if (!value.matches("^[a-zA-Z0-9@#$%&*!]+$")) {
+            throw new IllegalArgumentException(variableName + " contains invalid characters.");
+        }
+        if (value.length() < 8 || value.length() > 32) {
+            throw new IllegalArgumentException(variableName + " must be between 8 and 32 characters.");
+        }
+    }
+
+    public String getEurekaUsername() {
+        return eurekaUsername;
+    }
+
+    public String getEurekaPassword() {
+        return eurekaPassword;
+    }
+
+    public String getKeyStorePassword() {
+        return keyStorePassword;
+    }
+
+    public String getTrustStorePassword() {
+        return trustStorePassword;
+    }
+}
