@@ -83,6 +83,6 @@ Build and Package:
         
     - script:
         - echo "Deploying to Kubernetes"
-        - rsync -e "ssh -o StrictHostKeyChecking=no -i ${SSH_KEY_PATH}" -a deployment.yaml service.yaml ubuntu@13.127.208.46:/home/ubuntu/
-        - ssh -o StrictHostKeyChecking=no -i ${SSH_KEY_PATH} ubuntu@13.127.208.46 "kubectl apply -f /home/ubuntu/deployment.yaml && kubectl rollout status deployment/helloservice-jenkins-deployment || kubectl rollout undo deployment/helloservice-jenkins-deployment"
-        - ssh -o StrictHostKeyChecking=no -i ${SSH_KEY_PATH} ubuntu@13.127.208.46 "kubectl apply -f /home/ubuntu/service.yaml"
+        - rsync -e "ssh -o StrictHostKeyChecking=no -i $(printf '%q' "${SSH_KEY_PATH}")" -a deployment.yaml service.yaml ubuntu@13.127.208.46:/home/ubuntu/
+        - ssh -o StrictHostKeyChecking=no -i $(printf '%q' "${SSH_KEY_PATH}") ubuntu@13.127.208.46 "kubectl apply -f /home/ubuntu/deployment.yaml && kubectl rollout status deployment/helloservice-jenkins-deployment || kubectl rollout undo deployment/helloservice-jenkins-deployment"
+        - ssh -o StrictHostKeyChecking=no -i $(printf '%q' "${SSH_KEY_PATH}") ubuntu@13.127.208.46 "kubectl apply -f /home/ubuntu/service.yaml"

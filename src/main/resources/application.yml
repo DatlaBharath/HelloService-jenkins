@@ -8,7 +8,7 @@ eureka:
     registerWithEureka: true
     fetchRegistry: true
     serviceUrl:
-      defaultZone: https://localhost:8761/eureka/
+      defaultZone: https://localhost:8761/eureka/ # Only trusted domains are allowed
     username: ${EUREKA_USERNAME}
     password: ${EUREKA_PASSWORD}
   instance:
