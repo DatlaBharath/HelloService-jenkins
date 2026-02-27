@@ -5,7 +5,7 @@ plan:
     key: MVN
 triggers:
   - polling:
-      period: '10'
+      period: '60'
 
 stages:
   - Build and Deploy:
@@ -62,6 +62,13 @@ Build and Package:
                           image: ${DOCKER_USER}/helloservice-jenkins:${bamboo.buildNumber}
                           ports:
                           - containerPort: 5000
+                          resources:
+                            limits:
+                              memory: "512Mi"
+                              cpu: "500m"
+                            requests:
+                              memory: "256Mi"
+                              cpu: "250m"
             EOF
         
         - echo "Creating service.yaml"

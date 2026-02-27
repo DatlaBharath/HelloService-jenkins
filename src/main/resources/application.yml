@@ -2,27 +2,43 @@ package com.example.helloservice.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.crypto.encrypt.Encryptors;
+import org.springframework.security.crypto.encrypt.TextEncryptor;
+import org.springframework.security.crypto.keygen.KeyGenerators;
+
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+import java.security.Key;
+import java.util.Base64;
 
 @Configuration
 public class ApplicationConfig {
 
-    @Value("${EUREKA_USERNAME}")
-    private String eurekaUsername;
+    @Value("${EUREKA_USERNAME_ENCRYPTED}")
+    private String eurekaUsernameEncrypted;
 
-    @Value("${EUREKA_PASSWORD}")
-    private String eurekaPassword;
+    @Value("${EUREKA_PASSWORD_ENCRYPTED}")
+    private String eurekaPasswordEncrypted;
 
-    @Value("${KEY_STORE_PASSWORD}")
-    private String keyStorePassword;
+    @Value("${KEY_STORE_PASSWORD_ENCRYPTED}")
+    private String keyStorePasswordEncrypted;
 
-    @Value("${TRUST_STORE_PASSWORD}")
-    private String trustStorePassword;
+    @Value("${TRUST_STORE_PASSWORD_ENCRYPTED}")
+    private String trustStorePasswordEncrypted;
+
+    @Value("${ENCRYPTION_SECRET}")
+    private String encryptionSecret;
+
+    @Value("${ENCRYPTION_SALT}")
+    private String encryptionSalt;
+
+    private final TextEncryptor encryptor;
 
     public ApplicationConfig() {
-        validateInput("EUREKA_USERNAME", eurekaUsername);
-        validateInput("EUREKA_PASSWORD", eurekaPassword);
-        validateInput("KEY_STORE_PASSWORD", keyStorePassword);
-        validateInput("TRUST_STORE_PASSWORD", trustStorePassword);
+        validateInput("ENCRYPTION_SECRET", encryptionSecret);
+        validateInput("ENCRYPTION_SALT", encryptionSalt);
+
+        this.encryptor = Encryptors.text(encryptionSecret, encryptionSalt);
     }
 
     private void validateInput(String variableName, String value) {
@@ -37,19 +53,36 @@ public class ApplicationConfig {
         }
     }
 
-    public String getEurekaUsername() {
-        return eurekaUsername;
+    public String retrieveDecryptedCredential(String credentialType) {
+        switch (credentialType) {
+            case "EUREKA_USERNAME":
+                return encryptor.decrypt(eurekaUsernameEncrypted);
+            case "EUREKA_PASSWORD":
+                return encryptor.decrypt(eurekaPasswordEncrypted);
+            case "KEY_STORE_PASSWORD":
+                return encryptor.decrypt(keyStorePasswordEncrypted);
+            case "TRUST_STORE_PASSWORD":
+                return encryptor.decrypt(trustStorePasswordEncrypted);
+            default:
+                throw new IllegalArgumentException("Invalid credential type requested.");
+        }
     }
 
-    public String getEurekaPassword() {
-        return eurekaPassword;
+    public static String encryptCredential(String plainTextCredential, String secret, String salt) {
+        validateInput("PLAIN_TEXT_CREDENTIAL", plainTextCredential);
+        validateInput("SECRET", secret);
+        validateInput("SALT", salt);
+
+        TextEncryptor encryptor = Encryptors.text(secret, salt);
+        return encryptor.encrypt(plainTextCredential);
     }
 
-    public String getKeyStorePassword() {
-        return keyStorePassword;
-    }
+    public static String decryptCredential(String encryptedCredential, String secret, String salt) {
+        validateInput("ENCRYPTED_CREDENTIAL", encryptedCredential);
+        validateInput("SECRET", secret);
+        validateInput("SALT", salt);
 
-    public String getTrustStorePassword() {
-        return trustStorePassword;
+        TextEncryptor encryptor = Encryptors.text(secret, salt);
+        return encryptor.decrypt(encryptedCredential);
     }
 }
