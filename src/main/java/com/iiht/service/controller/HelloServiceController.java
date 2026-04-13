@@ -9,7 +9,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.util.HtmlUtils;
+import org.owasp.html.PolicyFactory;
+import org.owasp.html.Sanitizers;
 
 import java.time.Duration;
 import java.util.regex.Pattern;
@@ -69,7 +70,8 @@ public class HelloServiceController {
                 "</div>" +
                 "</body>" +
                 "</html>";
-        String sanitizedHtmlContent = HtmlUtils.htmlEscape(htmlContent);
+        PolicyFactory policy = Sanitizers.FORMATTING.and(Sanitizers.LINKS).and(Sanitizers.STYLES);
+        String sanitizedHtmlContent = policy.sanitize(htmlContent);
         return ResponseEntity.ok(sanitizedHtmlContent);
     }
 
