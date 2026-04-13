@@ -4,6 +4,9 @@ import io.github.bucket4j.Bucket;
 import io.github.bucket4j.Bucket4j;
 import io.github.bucket4j.Refill;
 import io.github.bucket4j.Bandwidth;
+import io.github.bucket4j.grid.GridBucketState;
+import io.github.bucket4j.grid.ProxyManager;
+import io.github.bucket4j.grid.jcache.JCacheProxyManager;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +15,10 @@ import org.springframework.web.bind.annotation.*;
 import org.owasp.html.PolicyFactory;
 import org.owasp.html.Sanitizers;
 
+import javax.cache.Cache;
+import javax.cache.CacheManager;
+import javax.cache.Caching;
+import javax.cache.configuration.MutableConfiguration;
 import java.time.Duration;
 import java.util.regex.Pattern;
 
@@ -21,9 +28,13 @@ public class HelloServiceController {
     private final Bucket bucket;
 
     public HelloServiceController(RateLimitConfig rateLimitConfig) {
+        CacheManager cacheManager = Caching.getCachingProvider().getCacheManager();
+        Cache<String, GridBucketState> cache = cacheManager.createCache("buckets",
+                new MutableConfiguration<String, GridBucketState>().setStoreByValue(false));
+        ProxyManager<String> proxyManager = new JCacheProxyManager<>(cache);
         Bandwidth limit = Bandwidth.classic(rateLimitConfig.getCapacity(),
                                             Refill.greedy(rateLimitConfig.getCapacity(), Duration.ofSeconds(rateLimitConfig.getRefillDuration())));
-        this.bucket = Bucket4j.builder().addLimit(limit).build();
+        this.bucket = proxyManager.builder().addLimit(limit).build("global-rate-limit");
     }
 
     private boolean isRateLimitExceeded() {
