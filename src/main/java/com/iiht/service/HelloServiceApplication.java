@@ -6,6 +6,8 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
@@ -85,19 +87,31 @@ class SecurityConfiguration {
 
 class RateLimitingFilter extends OncePerRequestFilter {
 
-    private final Bucket bucket;
+    private final Bucket authenticatedBucket;
+    private final Bucket unauthenticatedBucket;
 
     public RateLimitingFilter() {
-        Bandwidth limit = Bandwidth.classic(100, Refill.greedy(100, Duration.ofMinutes(1)));
-        this.bucket = Bucket4j.builder()
-                .addLimit(limit)
+        Bandwidth authenticatedLimit = Bandwidth.classic(50, Refill.greedy(50, Duration.ofMinutes(1))); // Stricter limit for authenticated requests
+        Bandwidth unauthenticatedLimit = Bandwidth.classic(100, Refill.greedy(100, Duration.ofMinutes(1))); // Default limit for unauthenticated requests
+
+        this.authenticatedBucket = Bucket4j.builder()
+                .addLimit(authenticatedLimit)
+                .build();
+
+        this.unauthenticatedBucket = Bucket4j.builder()
+                .addLimit(unauthenticatedLimit)
                 .build();
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        if (bucket.tryConsume(1)) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAuthenticated = authentication != null && authentication.isAuthenticated();
+
+        Bucket bucketToUse = isAuthenticated ? authenticatedBucket : unauthenticatedBucket;
+
+        if (bucketToUse.tryConsume(1)) {
             filterChain.doFilter(request, response);
         } else {
             response.setStatus(HttpServletResponse.SC_TOO_MANY_REQUESTS);
