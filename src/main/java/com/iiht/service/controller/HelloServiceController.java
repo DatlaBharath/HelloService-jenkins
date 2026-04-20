@@ -144,7 +144,7 @@ public class HelloServiceController {
 
     private boolean isValidHeaderValue(String value) {
         String safePattern = "^[a-zA-Z0-9-_:;,.]+$";
-        return value != null && Pattern.matches(safePattern, value);
+        return value != null && Pattern.matches(safePattern, value) && value.length() <= 256;
     }
 }
 
