@@ -15,6 +15,12 @@ import org.springframework.web.bind.annotation.*;
 import org.owasp.html.PolicyFactory;
 import org.owasp.html.Sanitizers;
 
+import com.hazelcast.config.Config;
+import com.hazelcast.config.EncryptionConfig;
+import com.hazelcast.config.NetworkConfig;
+import com.hazelcast.core.Hazelcast;
+import com.hazelcast.core.HazelcastInstance;
+
 import javax.cache.Cache;
 import javax.cache.CacheManager;
 import javax.cache.Caching;
@@ -28,6 +34,16 @@ public class HelloServiceController {
     private final Bucket bucket;
 
     public HelloServiceController(RateLimitConfig rateLimitConfig) {
+        Config hazelcastConfig = new Config();
+        NetworkConfig networkConfig = hazelcastConfig.getNetworkConfig();
+        EncryptionConfig encryptionConfig = new EncryptionConfig()
+                .setEnabled(true)
+                .setAlgorithm("AES")
+                .setSalt("secureSalt")
+                .setPassword("securePassword");
+        networkConfig.setEncryptionConfig(encryptionConfig);
+
+        HazelcastInstance hazelcastInstance = Hazelcast.newHazelcastInstance(hazelcastConfig);
         CacheManager cacheManager = Caching.getCachingProvider().getCacheManager();
         Cache<String, GridBucketState> cache = cacheManager.createCache("buckets",
                 new MutableConfiguration<String, GridBucketState>().setStoreByValue(false));
