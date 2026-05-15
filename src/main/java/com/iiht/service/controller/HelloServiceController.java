@@ -33,14 +33,23 @@ public class HelloServiceController {
 
     private final Bucket bucket;
 
+    @Value("${encryption.algorithm}")
+    private String encryptionAlgorithm;
+
+    @Value("${encryption.salt}")
+    private String encryptionSalt;
+
+    @Value("${encryption.password}")
+    private String encryptionPassword;
+
     public HelloServiceController(RateLimitConfig rateLimitConfig) {
         Config hazelcastConfig = new Config();
         NetworkConfig networkConfig = hazelcastConfig.getNetworkConfig();
         EncryptionConfig encryptionConfig = new EncryptionConfig()
                 .setEnabled(true)
-                .setAlgorithm("AES")
-                .setSalt("secureSalt")
-                .setPassword("securePassword");
+                .setAlgorithm(encryptionAlgorithm)
+                .setSalt(encryptionSalt)
+                .setPassword(encryptionPassword);
         networkConfig.setEncryptionConfig(encryptionConfig);
 
         HazelcastInstance hazelcastInstance = Hazelcast.newHazelcastInstance(hazelcastConfig);
