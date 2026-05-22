@@ -25,6 +25,8 @@ import javax.cache.Cache;
 import javax.cache.CacheManager;
 import javax.cache.Caching;
 import javax.cache.configuration.MutableConfiguration;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.regex.Pattern;
 
@@ -168,8 +170,16 @@ public class HelloServiceController {
     }
 
     private boolean isValidHeaderValue(String value) {
-        String safePattern = "^[a-zA-Z0-9-_:;,.]+$";
-        return value != null && Pattern.matches(safePattern, value) && value.length() <= 256 && !value.contains("\r") && !value.contains("\n");
+        if (value == null) {
+            return false;
+        }
+        try {
+            String decodedValue = URLDecoder.decode(value, StandardCharsets.UTF_8.name());
+            String safePattern = "^[a-zA-Z0-9-_:;,.]+$";
+            return Pattern.matches(safePattern, decodedValue) && decodedValue.length() <= 256 && !decodedValue.contains("\r") && !decodedValue.contains("\n");
+        } catch (Exception e) {
+            return false;
+        }
     }
 }
 
