@@ -109,6 +109,12 @@ class RateLimitingFilter extends OncePerRequestFilter {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         boolean isAuthenticated = authentication != null && authentication.isAuthenticated();
 
+        if (isAuthenticated && authentication.getPrincipal() == null) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("Unauthorized access.");
+            return;
+        }
+
         Bucket bucketToUse = isAuthenticated ? authenticatedBucket : unauthenticatedBucket;
 
         if (bucketToUse.tryConsume(1)) {
