@@ -35,18 +35,18 @@ public class HelloServiceController {
 
     private final Bucket bucket;
 
-    @Value("${encryption.algorithm}")
-    private String encryptionAlgorithm;
-
-    @Value("${encryption.salt}")
-    private String encryptionSalt;
-
-    @Value("${encryption.password}")
-    private String encryptionPassword;
-
     public HelloServiceController(RateLimitConfig rateLimitConfig) {
         Config hazelcastConfig = new Config();
         NetworkConfig networkConfig = hazelcastConfig.getNetworkConfig();
+
+        // Securely retrieve sensitive values from environment variables
+        String encryptionAlgorithm = System.getenv("ENCRYPTION_ALGORITHM");
+        String encryptionSalt = System.getenv("ENCRYPTION_SALT");
+        String encryptionPassword = System.getenv("ENCRYPTION_PASSWORD");
+
+        // Validate sensitive values
+        validateEncryptionConfig(encryptionAlgorithm, encryptionSalt, encryptionPassword);
+
         EncryptionConfig encryptionConfig = new EncryptionConfig()
                 .setEnabled(true)
                 .setAlgorithm(encryptionAlgorithm)
@@ -62,6 +62,18 @@ public class HelloServiceController {
         Bandwidth limit = Bandwidth.classic(rateLimitConfig.getCapacity(),
                                             Refill.greedy(rateLimitConfig.getCapacity(), Duration.ofSeconds(rateLimitConfig.getRefillDuration())));
         this.bucket = proxyManager.builder().addLimit(limit).build("global-rate-limit");
+    }
+
+    private void validateEncryptionConfig(String algorithm, String salt, String password) {
+        if (algorithm == null || !algorithm.equals("AES")) {
+            throw new IllegalArgumentException("Invalid encryption algorithm. Only AES is supported.");
+        }
+        if (salt == null || salt.length() < 16) {
+            throw new IllegalArgumentException("Encryption salt must be at least 16 characters long.");
+        }
+        if (password == null || password.length() < 12) {
+            throw new IllegalArgumentException("Encryption password must be at least 12 characters long.");
+        }
     }
 
     private boolean isRateLimitExceeded() {
