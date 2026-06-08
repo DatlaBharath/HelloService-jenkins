@@ -25,6 +25,7 @@ import javax.cache.Cache;
 import javax.cache.CacheManager;
 import javax.cache.Caching;
 import javax.cache.configuration.MutableConfiguration;
+import javax.servlet.http.HttpServletRequest;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -33,7 +34,8 @@ import java.util.regex.Pattern;
 @RestController
 public class HelloServiceController {
 
-    private final Bucket bucket;
+    private final ProxyManager<String> proxyManager;
+    private final Bandwidth limit;
 
     public HelloServiceController(RateLimitConfig rateLimitConfig) {
         Config hazelcastConfig = new Config();
@@ -58,10 +60,9 @@ public class HelloServiceController {
         CacheManager cacheManager = Caching.getCachingProvider().getCacheManager();
         Cache<String, GridBucketState> cache = cacheManager.createCache("buckets",
                 new MutableConfiguration<String, GridBucketState>().setStoreByValue(false));
-        ProxyManager<String> proxyManager = new JCacheProxyManager<>(cache);
-        Bandwidth limit = Bandwidth.classic(rateLimitConfig.getCapacity(),
-                                            Refill.greedy(rateLimitConfig.getCapacity(), Duration.ofSeconds(rateLimitConfig.getRefillDuration())));
-        this.bucket = proxyManager.builder().addLimit(limit).build("global-rate-limit");
+        this.proxyManager = new JCacheProxyManager<>(cache);
+        this.limit = Bandwidth.classic(rateLimitConfig.getCapacity(),
+                                       Refill.greedy(rateLimitConfig.getCapacity(), Duration.ofSeconds(rateLimitConfig.getRefillDuration())));
     }
 
     private void validateEncryptionConfig(String algorithm, String salt, String password) {
@@ -76,13 +77,15 @@ public class HelloServiceController {
         }
     }
 
-    private boolean isRateLimitExceeded() {
+    private boolean isRateLimitExceeded(String clientIdentifier) {
+        Bucket bucket = proxyManager.builder().addLimit(limit).build(clientIdentifier);
         return !bucket.tryConsume(1);
     }
 
     @GetMapping
-    public ResponseEntity<String> hello() {
-        if (isRateLimitExceeded()) {
+    public ResponseEntity<String> hello(HttpServletRequest request) {
+        String clientIdentifier = getClientIdentifier(request);
+        if (isRateLimitExceeded(clientIdentifier)) {
             return ResponseEntity.status(429).body("Too Many Requests - Rate limit exceeded");
         }
         String htmlContent = "<!DOCTYPE html>" +
@@ -125,73 +128,9 @@ public class HelloServiceController {
         return ResponseEntity.ok(sanitizedHtmlContent);
     }
 
-    @GetMapping("/greet")
-    public ResponseEntity<String> greet() {
-        if (isRateLimitExceeded()) {
-            return ResponseEntity.status(429).body("Too Many Requests - Rate limit exceeded");
-        }
-        return ResponseEntity.ok("Good Morning, Welcome To Demo Project");
-    }
-
-    @GetMapping("/add/{a}/{b}")
-    public ResponseEntity<String> add(@PathVariable String a, @PathVariable String b) {
-        if (isRateLimitExceeded()) {
-            return ResponseEntity.status(429).body("Too Many Requests - Rate limit exceeded");
-        }
-        try {
-            int numA = Integer.parseInt(a);
-            int numB = Integer.parseInt(b);
-            if (numA < 0 || numB < 0) {
-                return ResponseEntity.badRequest().body("Inputs must be non-negative integers.");
-            }
-            return ResponseEntity.ok(String.valueOf(numA + numB));
-        } catch (NumberFormatException e) {
-            return ResponseEntity.badRequest().body("Invalid input. Inputs must be integers.");
-        }
-    }
-
-    @GetMapping("/fact/{a}")
-    public ResponseEntity<String> factorial(@RequestHeader HttpHeaders headers, @PathVariable String a) {
-        if (isRateLimitExceeded()) {
-            return ResponseEntity.status(429).body("Too Many Requests - Rate limit exceeded");
-        }
-        if (headers != null) {
-            for (String headerName : headers.keySet()) {
-                String headerValue = headers.getFirst(headerName);
-                if (!isValidHeaderValue(headerValue)) {
-                    return ResponseEntity.badRequest().body("Invalid header value detected.");
-                }
-            }
-        }
-        try {
-            int numA = Integer.parseInt(a);
-            if (numA < 0) {
-                return ResponseEntity.badRequest().body("Input must be a non-negative integer.");
-            }
-            if (numA > 20) {
-                return ResponseEntity.badRequest().body("Input is too large to compute factorial.");
-            }
-            long fact = 1;
-            for (int i = 1; i <= numA; i++) {
-                fact *= i;
-            }
-            return ResponseEntity.ok(String.valueOf(fact));
-        } catch (NumberFormatException e) {
-            return ResponseEntity.badRequest().body("Invalid input. Input must be an integer.");
-        }
-    }
-
-    private boolean isValidHeaderValue(String value) {
-        if (value == null) {
-            return false;
-        }
-        try {
-            String decodedValue = URLDecoder.decode(value, StandardCharsets.UTF_8.name());
-            String safePattern = "^[a-zA-Z0-9-_:;,.]+$";
-            return Pattern.matches(safePattern, decodedValue) && decodedValue.length() <= 256 && !decodedValue.contains("\r") && !decodedValue.contains("\n");
-        } catch (Exception e) {
-            return false;
-        }
+    private String getClientIdentifier(HttpServletRequest request) {
+        String clientIp = request.getRemoteAddr();
+        return clientIp != null ? clientIp : "unknown-client";
     }
 }
 
