@@ -25,6 +25,8 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @SpringBootApplication
@@ -87,37 +89,26 @@ class SecurityConfiguration {
 
 class RateLimitingFilter extends OncePerRequestFilter {
 
-    private final Bucket authenticatedBucket;
-    private final Bucket unauthenticatedBucket;
+    private final Map<String, Bucket> endpointBuckets = new ConcurrentHashMap<>();
 
     public RateLimitingFilter() {
-        Bandwidth authenticatedLimit = Bandwidth.classic(50, Refill.greedy(50, Duration.ofMinutes(1))); // Stricter limit for authenticated requests
-        Bandwidth unauthenticatedLimit = Bandwidth.classic(100, Refill.greedy(100, Duration.ofMinutes(1))); // Default limit for unauthenticated requests
+        // Define rate limits for specific endpoints
+        endpointBuckets.put("/eureka/**", createBucket(20, 1)); // Stricter limit for critical endpoint
+        endpointBuckets.put("default", createBucket(100, 1)); // Default limit for other endpoints
+    }
 
-        this.authenticatedBucket = Bucket4j.builder()
-                .addLimit(authenticatedLimit)
-                .build();
-
-        this.unauthenticatedBucket = Bucket4j.builder()
-                .addLimit(unauthenticatedLimit)
-                .build();
+    private Bucket createBucket(int capacity, int refillTokensPerSecond) {
+        Bandwidth limit = Bandwidth.classic(capacity, Refill.greedy(refillTokensPerSecond, Duration.ofSeconds(1)));
+        return Bucket4j.builder().addLimit(limit).build();
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        boolean isAuthenticated = authentication != null && authentication.isAuthenticated();
+        String requestURI = request.getRequestURI();
+        Bucket bucket = endpointBuckets.getOrDefault(requestURI, endpointBuckets.get("default"));
 
-        if (isAuthenticated && authentication.getPrincipal() == null) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.getWriter().write("Unauthorized access.");
-            return;
-        }
-
-        Bucket bucketToUse = isAuthenticated ? authenticatedBucket : unauthenticatedBucket;
-
-        if (bucketToUse.tryConsume(1)) {
+        if (bucket.tryConsume(1)) {
             filterChain.doFilter(request, response);
         } else {
             response.setStatus(HttpServletResponse.SC_TOO_MANY_REQUESTS);
