@@ -1,5 +1,10 @@
 package com.iiht.service.controller;
 
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
+import com.amazonaws.services.secretsmanager.AWSSecretsManager;
+import com.amazonaws.services.secretsmanager.AWSSecretsManagerClientBuilder;
+import com.amazonaws.services.secretsmanager.model.GetSecretValueRequest;
+import com.amazonaws.services.secretsmanager.model.GetSecretValueResult;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.Bucket4j;
 import io.github.bucket4j.Refill;
@@ -25,10 +30,13 @@ import javax.cache.Cache;
 import javax.cache.CacheManager;
 import javax.cache.Caching;
 import javax.cache.configuration.MutableConfiguration;
+import javax.crypto.Cipher;
+import javax.crypto.spec.SecretKeySpec;
 import javax.servlet.http.HttpServletRequest;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Base64;
 import java.util.regex.Pattern;
 
 @RestController
@@ -41,10 +49,10 @@ public class HelloServiceController {
         Config hazelcastConfig = new Config();
         NetworkConfig networkConfig = hazelcastConfig.getNetworkConfig();
 
-        // Securely retrieve sensitive values from environment variables
-        String encryptionAlgorithm = System.getenv("ENCRYPTION_ALGORITHM");
-        String encryptionSalt = System.getenv("ENCRYPTION_SALT");
-        String encryptionPassword = System.getenv("ENCRYPTION_PASSWORD");
+        // Securely retrieve and decrypt sensitive values from AWS Secrets Manager
+        String encryptionAlgorithm = decryptValue(getSecret("ENCRYPTION_ALGORITHM"));
+        String encryptionSalt = decryptValue(getSecret("ENCRYPTION_SALT"));
+        String encryptionPassword = decryptValue(getSecret("ENCRYPTION_PASSWORD"));
 
         // Validate sensitive values
         validateEncryptionConfig(encryptionAlgorithm, encryptionSalt, encryptionPassword);
@@ -75,6 +83,37 @@ public class HelloServiceController {
         if (password == null || password.length() < 12) {
             throw new IllegalArgumentException("Encryption password must be at least 12 characters long.");
         }
+    }
+
+    private String decryptValue(String encryptedValue) {
+        try {
+            String secretKey = getSecret("DECRYPTION_KEY");
+            validateEncryptionKey(secretKey);
+            SecretKeySpec keySpec = new SecretKeySpec(secretKey.getBytes(StandardCharsets.UTF_8), "AES");
+            Cipher cipher = Cipher.getInstance("AES");
+            cipher.init(Cipher.DECRYPT_MODE, keySpec);
+            byte[] decodedValue = Base64.getDecoder().decode(encryptedValue);
+            return new String(cipher.doFinal(decodedValue), StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to decrypt sensitive value", e);
+        }
+    }
+
+    private void validateEncryptionKey(String key) {
+        if (key == null || key.length() != 16) {
+            throw new IllegalArgumentException("Invalid encryption key. Key must be 16 characters long.");
+        }
+    }
+
+    private String getSecret(String secretName) {
+        AWSSecretsManager client = AWSSecretsManagerClientBuilder.standard()
+                .withRegion("us-east-1")
+                .withCredentials(DefaultAWSCredentialsProviderChain.getInstance())
+                .build();
+
+        GetSecretValueRequest getSecretValueRequest = new GetSecretValueRequest().withSecretId(secretName);
+        GetSecretValueResult getSecretValueResult = client.getSecretValue(getSecretValueRequest);
+        return getSecretValueResult.getSecretString();
     }
 
     private boolean isRateLimitExceeded(String clientIdentifier) {
