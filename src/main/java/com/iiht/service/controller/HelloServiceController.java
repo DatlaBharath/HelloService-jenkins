@@ -9,6 +9,11 @@ import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.Bucket4j;
 import io.github.bucket4j.Refill;
+import io.github.bucket4j.distributed.proxy.ProxyManager;
+import io.github.bucket4j.redis.lettuce.RedisBucketBuilder;
+import io.github.bucket4j.redis.lettuce.RedisProxyManager;
+import io.lettuce.core.RedisClient;
+import io.lettuce.core.api.StatefulRedisConnection;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +23,8 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @RestController
 public class HelloServiceController {
@@ -25,12 +32,22 @@ public class HelloServiceController {
     @Value("${aws.region}")
     private String awsRegion;
 
+    @Value("${encryption.key}")
+    private String encryptionKey;
+
     private final Bucket bucket;
+    private static final Logger logger = Logger.getLogger(HelloServiceController.class.getName());
 
     public HelloServiceController(@Value("${rate.limit.capacity:10}") int capacity,
-                                  @Value("${rate.limit.refill.duration:1}") int refillDuration) {
+                                  @Value("${rate.limit.refill.duration:1}") int refillDuration,
+                                  @Value("${redis.url}") String redisUrl) {
+        RedisClient redisClient = RedisClient.create(redisUrl);
+        StatefulRedisConnection<String, String> connection = redisClient.connect();
+        ProxyManager<String> proxyManager = Bucket4j.extension(RedisBucketBuilder.class)
+                .proxyManagerForRedis(connection.sync());
+
         Bandwidth limit = Bandwidth.classic(capacity, Refill.intervally(capacity, Duration.ofSeconds(refillDuration)));
-        this.bucket = Bucket4j.builder().addLimit(limit).build();
+        this.bucket = proxyManager.builder().addLimit(limit).build("rate-limit-bucket");
     }
 
     private String getSecret(String secretName) {
@@ -46,7 +63,11 @@ public class HelloServiceController {
 
         GetSecretValueRequest getSecretValueRequest = new GetSecretValueRequest().withSecretId(secretName);
         GetSecretValueResult getSecretValueResult = client.getSecretValue(getSecretValueRequest);
-        return getSecretValueResult.getSecretString();
+        String secret = getSecretValueResult.getSecretString();
+
+        logger.info("Accessed secret: " + secretName);
+
+        return encryptValue(secret);
     }
 
     private void validateAccess(String secretName) {
@@ -59,17 +80,37 @@ public class HelloServiceController {
         return true; // Replace with actual logic
     }
 
+    private String encryptValue(String value) {
+        try {
+            validateEncryptionKey(encryptionKey);
+            SecretKeySpec keySpec = new SecretKeySpec(encryptionKey.getBytes(StandardCharsets.UTF_8), "AES");
+            Cipher cipher = Cipher.getInstance("AES");
+            cipher.init(Cipher.ENCRYPT_MODE, keySpec);
+            byte[] encryptedValue = cipher.doFinal(value.getBytes(StandardCharsets.UTF_8));
+            return Base64.getEncoder().encodeToString(encryptedValue);
+        } catch (IllegalArgumentException e) {
+            logger.log(Level.SEVERE, "Invalid encryption key provided", e);
+            throw new EncryptionException("Encryption failed due to invalid key", e);
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, "Unexpected error during encryption", e);
+            throw new EncryptionException("Encryption failed due to an unexpected error", e);
+        }
+    }
+
     private String decryptValue(String encryptedValue) {
         try {
-            String secretKey = getSecret("DECRYPTION_KEY");
-            validateEncryptionKey(secretKey);
-            SecretKeySpec keySpec = new SecretKeySpec(secretKey.getBytes(StandardCharsets.UTF_8), "AES");
+            validateEncryptionKey(encryptionKey);
+            SecretKeySpec keySpec = new SecretKeySpec(encryptionKey.getBytes(StandardCharsets.UTF_8), "AES");
             Cipher cipher = Cipher.getInstance("AES");
             cipher.init(Cipher.DECRYPT_MODE, keySpec);
             byte[] decodedValue = Base64.getDecoder().decode(encryptedValue);
             return new String(cipher.doFinal(decodedValue), StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            logger.log(Level.SEVERE, "Invalid encryption key provided", e);
+            throw new DecryptionException("Decryption failed due to invalid key", e);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to decrypt sensitive value", e);
+            logger.log(Level.SEVERE, "Unexpected error during decryption", e);
+            throw new DecryptionException("Decryption failed due to an unexpected error", e);
         }
     }
 
@@ -77,6 +118,18 @@ public class HelloServiceController {
         if (key == null || key.length() != 16) {
             throw new IllegalArgumentException("Invalid encryption key. Key must be 16 characters long.");
         }
+    }
+}
+
+class EncryptionException extends RuntimeException {
+    public EncryptionException(String message, Throwable cause) {
+        super(message, cause);
+    }
+}
+
+class DecryptionException extends RuntimeException {
+    public DecryptionException(String message, Throwable cause) {
+        super(message, cause);
     }
 }
 
